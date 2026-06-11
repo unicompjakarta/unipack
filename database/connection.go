@@ -79,7 +79,7 @@ func ConnectDB() {
 
 	// 2. Ambil data dari .env secara dinamis, jika kosong gunakan default lokal
 	username := getEnv("DB_USERNAME", "root")
-	password := getEnv("DB_PASSWORD", "")
+	password := getEnv("DB_PASSWORD", "admin")
 	host := getEnv("DB_HOST", "127.0.0.1")
 	port := getEnv("DB_PORT", "3306")
 	dbName := getEnv("DB_NAME", "db_unipack_lokal")
