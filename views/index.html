@@ -1,0 +1,495 @@
+<!-- <!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beli Lisensi UniPacking Recorder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col justify-center items-center py-12 px-4">
+
+    <div class="max-w-4xl w-full text-center mb-10">
+        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-3">
+            🚀 SIAP OTOMASI MEJA PACKING ANDA?
+        </h1>
+        <p class="text-slate-400 max-w-xl mx-auto text-sm md:text-base">
+            Pilih paket sesuai kebutuhan gudang Anda. Token lisensi akan langsung terbit instan setelah order sukses.
+        </p>
+    </div>
+
+    <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        
+        <div class="space-y-4">
+            <h2 class="text-lg font-bold text-slate-300 mb-2">1. PILIH PAKET LISENSI</h2>
+            
+            <label class="block bg-slate-800 p-5 rounded-xl border-2 border-purple-500/50 cursor-pointer hover:bg-slate-750 transition relative">
+                <input type="radio" name="plan_type" value="TRIAL" class="absolute top-5 right-5 w-5 h-5 accent-purple-500" checked onchange="updateTotal(0, '🎁 GRATIS / 7 Hari')">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🎁</span>
+                    <div>
+                        <h3 class="font-bold text-white text-base">Paket Trial Nyoba</h3>
+                        <p class="text-xs text-slate-400">Masa aktif 7 Hari (Batas 1 PC)</p>
+                    </div>
+                </div>
+                <div class="mt-4 text-xl font-black text-purple-400">Rp 0 <span class="text-xs font-normal text-slate-400">/ 7 hari</span></div>
+            </label>
+
+            <label class="block bg-slate-800 p-5 rounded-xl border-2 border-slate-700 cursor-pointer hover:border-blue-500 hover:bg-slate-750 transition relative">
+                <input type="radio" name="plan_type" value="MONTHLY" class="absolute top-5 right-5 w-5 h-5 accent-blue-500" onchange="updateTotal(50000, '🗓️ Premium Bulanan')">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🗓️</span>
+                    <div>
+                        <h3 class="font-bold text-white text-base">Premium Bulanan</h3>
+                        <p class="text-xs text-slate-400">Masa aktif 30 Hari (Batas 1 PC)</p>
+                    </div>
+                </div>
+                <div class="mt-4 text-xl font-black text-blue-400">Rp 50.000 <span class="text-xs font-normal text-slate-400">/ bulan</span></div>
+            </label>
+
+            <label class="block bg-slate-800 p-5 rounded-xl border-2 border-slate-700 cursor-pointer hover:border-emerald-500 hover:bg-slate-750 transition relative">
+                <span class="absolute -top-2.5 left-5 bg-emerald-600 text-[10px] text-white font-bold px-2.5 py-0.5 rounded-full tracking-wider uppercase shadow-md">Paling Hemat</span>
+                <input type="radio" name="plan_type" value="YEARLY" class="absolute top-5 right-5 w-5 h-5 accent-emerald-500" onchange="updateTotal(500000, '🚀 Premium Tahunan')">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🚀</span>
+                    <div>
+                        <h3 class="font-bold text-white text-base">Premium Tahunan</h3>
+                        <p class="text-xs text-slate-400">Masa aktif 365 Hari (Batas 1 PC)</p>
+                    </div>
+                </div>
+                <div class="mt-4 text-xl font-black text-emerald-400">Rp 500.000 <span class="text-xs font-normal text-slate-400">/ tahun</span></div>
+            </label>
+        </div>
+
+        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl space-y-5">
+            <h2 class="text-lg font-bold text-slate-300">2. DATA PEMBELI & CHECKOUT</h2>
+            
+            <form id="checkoutForm" onsubmit="prosesCheckout(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Nama Toko / Seller</label>
+                    <input type="text" id="customer_name" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500 transition" placeholder="Contoh: Toko Maju Jaya" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Alamat Email Aktif</label>
+                    <input type="email" id="customer_email" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500 transition" placeholder="Contoh: maju@gmail.com" required>
+                </div>
+
+                <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-750 space-y-2 mt-2">
+                    <div class="flex justify-between text-xs text-slate-400">
+                        <span>Item Paket:</span>
+                        <span id="summary_packet" class="font-semibold text-white">🎁 GRATIS / 7 Hari</span>
+                    </div>
+                    <div class="flex justify-between text-xs text-slate-400 border-b border-slate-700/50 pb-2">
+                        <span>No. Invoice:</span>
+                        <span id="summary_invoice" class="font-mono text-slate-300">INV-GENERATING...</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-1">
+                        <span class="text-sm font-bold text-white">Total Bayar:</span>
+                        <span id="summary_total" class="text-lg font-black text-amber-400">Rp 0</span>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnCheckout" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 transform hover:-translate-y-0.5 text-sm">
+                    🔒 AMBIL TOKEN LISENSI SEKARANG
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="tokenModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 max-w-md w-full rounded-2xl border border-slate-700 p-6 text-center shadow-2xl animate-fade-in">
+            <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">✅</div>
+            <h3 class="text-xl font-black text-white mb-1">ORDER BERHASIL!</h3>
+            <p class="text-xs text-slate-400 mb-6">Salin token lisensi di bawah ini dan masukkan ke aplikasi desktop packing Anda.</p>
+            
+            <div class="bg-slate-900 border border-slate-750 p-4 rounded-xl font-mono text-base font-bold text-amber-400 select-all tracking-wider break-all mb-6" id="generatedTokenDisplay">
+                UNI-TRIAL-XXXXXX
+            </div>
+
+            <button onclick="tutupModal()" class="w-full bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold py-2.5 rounded-lg transition">
+                Selesai & Masuk Aplikasi
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ GANTI IP INI DENGAN IP VPS ANDA JIKA SUDAH DEPLOY ONLINE
+        const BACKEND_URL = "http://localhost:3000/api/v1/license/generate";
+
+        // Generate Invoice ID Acak Saat Halaman Dibuka
+        const randomInvoice = "INV-" + Date.now();
+        document.getElementById("summary_invoice").innerText = randomInvoice;
+
+        function updateTotal(harga, namaPaket) {
+            document.getElementById("summary_packet").innerText = namaPaket;
+            document.getElementById("summary_total").innerText = "Rp " + harga.toLocaleString('id-ID');
+        }
+
+       async function prosesCheckout(event) {
+    event.preventDefault();
+    
+    const btn = document.getElementById("btnCheckout");
+    const customerName = document.getElementById("customer_name").value;
+    const customerEmail = document.getElementById("customer_email").value;
+    const planType = document.querySelector('input[name="plan_type"]:checked').value;
+    const invoiceId = document.getElementById("summary_invoice").innerText;
+
+    // Animasi Loading Tombol
+    btn.disabled = true;
+    btn.innerText = "⏳ SEDANG MEMPROSES LISENSI...";
+    btn.classList.add("opacity-50");
+
+    // Siapkan payload data untuk dikirim ke API Golang
+    const payload = {
+        customer_name: customerName,
+        customer_email: customerEmail,
+        plan_type: planType,
+        invoice_id: invoiceId
+    };
+
+    try {
+        // Tembak API Golang
+        const response = await fetch(BACKEND_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.token) {
+            // Tampilkan Token Asli ke Pop-up Modal
+            document.getElementById("generatedTokenDisplay").innerText = data.token;
+            document.getElementById("tokenModal").classList.remove("hidden");
+        } else { // <-- DI SINI: `</div>` nya sudah dihapus dan diganti kurung kurawal biasa
+            alert("Gagal men-generate token: " + (data.message || "Terjadi kesalahan server."));
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Tidak dapat terhubung ke server backend Golang, pastikan server Anda menyala!");
+    } finally {
+        // Kembalikan tombol ke status normal
+        btn.disabled = false;
+        btn.innerText = "🔒 AMBIL TOKEN LISENSI SEKARANG";
+        btn.classList.remove("opacity-50");
+    }
+}
+
+function tutupModal() {
+    document.getElementById("tokenModal").classList.add("hidden");
+    document.getElementById("checkoutForm").reset();
+    // Refresh invoice baru untuk orderan selanjutnya
+    document.getElementById("summary_invoice").innerText = "INV-" + Date.now();
+    updateTotal(0, '🎁 GRATIS / 7 Hari');
+}
+    </script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniPacking Recorder - Solusi Otomasi Meja Packing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen antialiased selection:bg-blue-500 selection:text-white">
+
+    <header class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🚀</span>
+                <span class="font-black text-lg tracking-wider bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">UNIPACKING</span>
+            </div>
+            <nav class="hidden sm:flex items-center gap-6 text-sm font-medium text-slate-400">
+                <a href="#fitur" class="hover:text-white transition">Fitur</a>
+                <a href="#cara-kerja" class="hover:text-white transition">Cara Kerja</a>
+                <a href="#keunggulan" class="hover:text-white transition">Keunggulan</a>
+            </nav>
+            <div>
+                <a href="#order" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-md transition">Beli Lisensi</a>
+            </div>
+        </div>
+    </header>
+
+    <section class="relative overflow-hidden py-20 lg:py-28 border-b border-slate-800">
+        <div class="max-w-4xl mx-auto px-4 text-center relative z-10">
+            <span class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 mb-4 border border-blue-500/20">
+                🎉 Automated Packing Recorder v1.0
+            </span>
+            <h1 class="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-white mb-6 leading-tight">
+                Rekam Proses Packing <br class="hidden sm:block">
+                <span class="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Bebas Rugi Klaim Kustomer</span>
+            </h1 >
+            <p class="text-slate-400 max-w-2xl mx-auto text-base sm:text-lg mb-10 leading-relaxed">
+                Lindungi toko marketplace Anda dari kecurangan klaim barang kurang atau salah kirim. Sistem otomatis merekam video packing berbasis scan resi barcode secara otonom.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+                <a href="#order" class="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-8 py-4 rounded-xl shadow-lg transition transform hover:-translate-y-0.5 text-center">
+                    Coba Gratis 7 Hari Sekarang
+                </a>
+                <a href="#fitur" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-750 text-slate-300 font-medium px-8 py-4 rounded-xl border border-slate-700 transition text-center">
+                    Pelajari Fitur 👁️
+                </a>
+            </div>
+        </div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08),transparent_60%)]"></div>
+    </section>
+
+    <section id="fitur" class="py-20 border-b border-slate-800 bg-slate-950/40">
+        <div class="max-w-5xl mx-auto px-4">
+            <div class="text-center max-w-xl mx-auto mb-16">
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-3">Fitur Utama UniPacking Dashboard</h2>
+                <p class="text-slate-400 text-sm">Dirancang khusus untuk performa tinggi meja packing e-commerce tanpa memperlambat operasional gudang.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-slate-800/60 p-6 rounded-2xl border border-slate-800 hover:border-slate-700 transition">
+                    <div class="text-3xl mb-4">📹</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Auto Record via Barcode</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">Kamera otomatis merekam begitu handler melakukan scan resi pesanan dan langsung berhenti saat paket selesai di-packing.</p>
+                </div>
+                <div class="bg-slate-800/60 p-6 rounded-2xl border border-slate-800 hover:border-slate-700 transition">
+                    <div class="text-3xl mb-4">🗄️</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Penamaan File Otomatis</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">File rekaman video otomatis diberi nama sesuai nomor resi unik marketplace. Cari bukti video jadi super cepat tinggal ketik nomor resi.</p>
+                </div>
+                <div class="bg-slate-800/60 p-6 rounded-2xl border border-slate-800 hover:border-slate-700 transition">
+                    <div class="text-3xl mb-4">🛡️</div>
+                    <h3 class="text-lg font-bold text-white mb-2">Hardware-Locked Security</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">Sistem lisensi aman terikat HWID komputer. Mencegah token disalahgunakan atau disebarluaskan di luar PC meja packing resmi Anda.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="cara-kerja" class="py-20 border-b border-slate-800">
+        <div class="max-w-5xl mx-auto px-4">
+            <div class="text-center max-w-xl mx-auto mb-16">
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-3">Hanya 3 Langkah Mudah</h2>
+                <p class="text-slate-400 text-sm">Proses integrasi instan tanpa ribet setting database server.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 relative">
+                <div class="text-center space-y-3 relative z-10">
+                    <div class="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-black mx-auto text-lg shadow-lg shadow-blue-500/20">1</div>
+                    <h3 class="font-bold text-white text-base">Ambil Token</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed px-4">Pilih paket di bawah ini, isi data toko, dan dapatkan token lisensi instan via Cashlez.</p>
+                </div>
+                <div class="text-center space-y-3 relative z-10">
+                    <div class="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-black mx-auto text-lg shadow-lg shadow-indigo-500/20">2</div>
+                    <h3 class="font-bold text-white text-base">Aktivasi di Aplikasi</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed px-4">Masukkan token di aplikasi desktop PC Packing Anda. Sistem otomatis mengunci HWID perangkat.</p>
+                </div>
+                <div class="text-center space-y-3 relative z-10">
+                    <div class="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center font-black mx-auto text-lg shadow-lg shadow-emerald-500/20">3</div>
+                    <h3 class="font-bold text-white text-base">Siap Amankan Toko</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed px-4">Mulai proses packing. Setiap pesanan terdokumentasi rapi, siap bantai balik klaim palsu pembeli.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="keunggulan" class="py-20 border-b border-slate-800 bg-slate-950/40">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-4">Mengapa Seller Cerdas Memilih UniPacking?</h2>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-6">
+                        CCTV konvensional membuat Anda membuang waktu berjam-jam hanya untuk mencari potongan video berdurasi 1 menit saat kustomer komplain barang kurang. Dengan UniPacking, data video dicari instan menggunakan pencarian Resi.
+                    </p>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex items-start gap-2"><span class="text-emerald-400">✔</span> <span class="text-slate-300">Hemat Storage (Kompresi rekaman efisien)</span></div>
+                        <div class="flex items-start gap-2"><span class="text-emerald-400">✔</span> <span class="text-slate-300">Anti Ribet (Jalan otonom di background PC Windows)</span></div>
+                        <div class="flex items-start gap-2"><span class="text-emerald-400">✔</span> <span class="text-slate-300">Solusi Hukum Validasi Banding Marketplace Resmi</span></div>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-slate-800 to-slate-800/40 p-8 rounded-2xl border border-slate-700/60 shadow-xl text-center space-y-4">
+                    <div class="text-5xl">👑</div>
+                    <div class="text-2xl font-black text-white">Rugi Jutaan Akibat Bad Buyer?</div>
+                    <p class="text-slate-400 text-xs leading-relaxed">Jangan biarkan keuntungan toko Anda habis dimakan klaim retur palsu kustomer nakal. Amankan meja packing Anda sekarang!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="order" class="py-20 w-full max-w-4xl mx-auto px-4 scroll-mt-16">
+        <div class="text-center mb-10">
+            <h2 class="text-3xl font-extrabold tracking-tight text-white mb-3">
+                🛒 MULAI AMANKAN LISENSI ANDA
+            </h2>
+            <p class="text-slate-400 max-w-xl mx-auto text-sm">
+                Pilih paket sesuai kebutuhan gudang Anda. Token lisensi akan langsung terbit instan setelah order sukses.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start w-full">
+            
+           <div class="space-y-4">
+    <h2 class="text-lg font-bold text-slate-300 mb-2">1. PILIH PAKET LISENSI</h2>
+    
+    <label class="block bg-slate-800 p-5 rounded-xl border-2 border-purple-500/50 cursor-pointer hover:bg-slate-750 transition relative">
+        <input type="radio" name="plan_type" value="TRIAL" class="absolute top-5 right-5 w-5 h-5 accent-purple-500" checked onchange="updateTotal(0, '🎁 GRATIS / 7 Hari')">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">🎁</span>
+            <div>
+                <h3 class="font-bold text-white text-base">Paket Trial Nyoba</h3>
+                <p class="text-xs text-slate-400">Masa aktif 7 Hari (Batas 1 PC)</p>
+            </div>
+        </div>
+        <div class="mt-4 text-xl font-black text-purple-400">Rp 0 <span class="text-xs font-normal text-slate-400">/ 7 hari</span></div>
+    </label>
+
+    <label class="block bg-slate-800 p-5 rounded-xl border-2 border-slate-700 cursor-pointer hover:border-blue-500 hover:bg-slate-750 transition relative">
+        <input type="radio" name="plan_type" value="MONTHLY" class="absolute top-5 right-5 w-5 h-5 accent-blue-500" onchange="updateTotal(50000, '🗓️ Premium Bulanan')">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">🗓️</span>
+            <div>
+                <h3 class="font-bold text-white text-base">Premium Bulanan</h3>
+                <p class="text-xs text-slate-400">Masa aktif 30 Hari (Batas 1 PC)</p>
+            </div>
+        </div>
+        <div class="mt-4 text-xl font-black text-blue-400">Rp 50.000 <span class="text-xs font-normal text-slate-400">/ bulan</span></div>
+    </label>
+
+    <label class="block bg-slate-800 p-5 rounded-xl border-2 border-slate-700 cursor-pointer hover:border-emerald-500 hover:bg-slate-750 transition relative">
+        <span class="absolute -top-2.5 left-5 bg-emerald-600 text-[10px] text-white font-bold px-2.5 py-0.5 rounded-full tracking-wider uppercase shadow-md">Paling Hemat</span>
+        <input type="radio" name="plan_type" value="YEARLY" class="absolute top-5 right-5 w-5 h-5 accent-emerald-500" onchange="updateTotal(500000, '🚀 Premium Tahunan')">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">🚀</span>
+            <div>
+                <h3 class="font-bold text-white text-base">Premium Tahunan</h3>
+                <p class="text-xs text-slate-400">Masa aktif 365 Hari (Batas 1 PC)</p>
+            </div>
+        </div>
+        <div class="mt-4 text-xl font-black text-emerald-400">Rp 500.000 <span class="text-xs font-normal text-slate-400">/ tahun</span></div>
+    </label>
+</div>
+
+            <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl space-y-5 w-full">
+                <h2 class="text-lg font-bold text-slate-300">2. DATA PEMBELI & CHECKOUT</h2>
+                
+                <form id="checkoutForm" onsubmit="prosesCheckout(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Nama Toko / Seller</label>
+                        <input type="text" id="customer_name" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500 transition" placeholder="Contoh: Toko Maju Jaya" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Alamat Email Aktif</label>
+                        <input type="email" id="customer_email" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500 transition" placeholder="Contoh: maju@gmail.com" required>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-750 space-y-2 mt-2">
+                        <div class="flex justify-between text-xs text-slate-400">
+                            <span>Item Paket:</span>
+                            <span id="summary_packet" class="font-semibold text-white">🎁 GRATIS / 7 Hari</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-400 border-b border-slate-700/50 pb-2">
+                            <span>No. Invoice:</span>
+                            <span id="summary_invoice" class="font-mono text-slate-300">INV-GENERATING...</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-1">
+                            <span class="text-sm font-bold text-white">Total Bayar:</span>
+                            <span id="summary_total" class="text-lg font-black text-amber-400">Rp 0</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btnCheckout" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition duration-200 transform hover:-translate-y-0.5 text-sm">
+                        🔒 AMBIL TOKEN LISENSI SEKARANG
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <footer class="w-full bg-slate-950 py-6 border-t border-slate-800 text-center text-xs text-slate-500">
+        <p>&copy; 2026 UniPacking Recorder SaaS. Powered by Unicomputer Hub. All Rights Reserved.</p>
+    </footer>
+
+    <div id="tokenModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 max-w-md w-full rounded-2xl border border-slate-700 p-6 text-center shadow-2xl animate-fade-in">
+            <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">✅</div>
+            <h3 class="text-xl font-black text-white mb-1">ORDER BERHASIL!</h3>
+            <p class="text-xs text-slate-400 mb-6">Salin token lisensi di bawah ini dan masukkan ke aplikasi desktop packing Anda.</p>
+            
+            <div class="bg-slate-900 border border-slate-750 p-4 rounded-xl font-mono text-base font-bold text-amber-400 select-all tracking-wider break-all mb-6" id="generatedTokenDisplay">
+                UNI-TRIAL-XXXXXX
+            </div>
+
+            <button onclick="tutupModal()" class="w-full bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold py-2.5 rounded-lg transition">
+                Selesai & Masuk Aplikasi
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ GANTI IP INI DENGAN IP VPS ANDA JIKA SUDAH DEPLOY ONLINE
+        const BACKEND_URL = "/api/v1/license/generate";
+
+        // Generate Invoice ID Acak Saat Halaman Dibuka
+        const randomInvoice = "INV-" + Date.now();
+        document.getElementById("summary_invoice").innerText = randomInvoice;
+
+        function updateTotal(harga, namaPaket) {
+            document.getElementById("summary_packet").innerText = namaPaket;
+            document.getElementById("summary_total").innerText = "Rp " + harga.toLocaleString('id-ID');
+        }
+
+        async function prosesCheckout(event) {
+            event.preventDefault();
+            
+            const btn = document.getElementById("btnCheckout");
+            const customerName = document.getElementById("customer_name").value;
+            const customerEmail = document.getElementById("customer_email").value;
+            const planType = document.querySelector('input[name="plan_type"]:checked').value;
+            const invoiceId = document.getElementById("summary_invoice").innerText;
+
+            // Animasi Loading Tombol
+            btn.disabled = true;
+            btn.innerText = "⏳ SEDANG MEMPROSES LISENSI...";
+            btn.classList.add("opacity-50");
+
+            const payload = {
+                customer_name: customerName,
+                customer_email: customerEmail,
+                plan_type: planType,
+                invoice_id: invoiceId
+            };
+
+            try {
+                const response = await fetch(BACKEND_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.token) {
+                    document.getElementById("generatedTokenDisplay").innerText = data.token;
+                    document.getElementById("tokenModal").classList.remove("hidden");
+                } else {
+                alert("Gagal men-generate token: " + (data.message || "Terjadi kesalahan server."));
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Tidak dapat terhubung ke server backend Golang, pastikan server Anda menyala!");
+        } finally {
+            // Ini sudah bersih dari karakter gaib, Bos
+            btn.disabled = false;
+            btn.innerText = "🔒 AMBIL TOKEN LISENSI SEKARANG";
+            btn.classList.remove("opacity-50");
+        }
+    }
+
+        function tutupModal() {
+            document.getElementById("tokenModal").classList.add("hidden");
+            document.getElementById("checkoutForm").reset();
+            document.getElementById("summary_invoice").innerText = "INV-" + Date.now();
+            updateTotal(0, '🎁 GRATIS / 7 Hari');
+        }
+    </script>
+</body>
+</html>

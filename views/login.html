@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Login Owner - Unicomputer SaaS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-900 flex items-center justify-center h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-96">
+      <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">
+        👑 ADMIN OWNER LOGIN
+      </h2>
+      <form action="/admin/login" method="POST" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-600"
+            >Username</label
+          >
+          <input
+            type="text"
+            name="username"
+            class="w-full border p-2 rounded focus:outline-blue-500"
+            required
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-600"
+            >Password</label
+          >
+          <input
+            type="password"
+            name="password"
+            class="w-full border p-2 rounded focus:outline-blue-500"
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          class="w-full bg-blue-600 text-white p-2 rounded font-bold hover:bg-blue-700 transition"
+        >
+          MASUK DASHBOARD
+        </button>
+      </form>
+    </div>
+  </body>
+</html>

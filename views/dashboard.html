@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Owner - Unicomputer SaaS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <nav class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md">
+        <h1 class="text-xl font-bold tracking-wider">👑 UNICOMPUTER PACKING SAAS HUB</h1>
+        <a href="/admin/logout" class="bg-red-500 hover:bg-red-600 text-xs px-4 py-2 rounded font-bold transition">LOGOUT</a>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow border md:col-span-2">
+                <h3 class="text-lg font-bold text-slate-800 mb-4">[+] TERBITKAN TOKEN LISENSI BARU</h3>
+                <form action="/admin/license/generate" method="POST" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input type="text" name="customer_name" placeholder="Nama Toko Seller" class="border p-2 rounded text-sm focus:outline-blue-500" required>
+                    <input type="email" name="customer_email" placeholder="Email Seller" class="border p-2 rounded text-sm focus:outline-blue-500">
+                    <select name="plan_type" class="border p-2 rounded text-sm focus:outline-blue-500">
+                        <option value="TRIAL">🎁 PAKET TRIAL (7 HARI)</option>
+                        <option value="MONTHLY">🗓️ PAKET PREMIUM BULANAN (30 HARI)</option>
+                        <option value="YEARLY">🚀 PAKET PREMIUM TAHUNAN (365 HARI)</option>
+                    </select>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-sm transition py-2">GENERATED & CREATE TOKEN</button>
+                </form>
+            </div>
+            <div class="bg-blue-600 text-white p-6 rounded-lg shadow flex flex-col justify-center items-center text-center">
+                <span class="text-sm font-semibold tracking-wide opacity-80">TOTAL PERANGKAT SELLER AKTIF</span>
+                <span class="text-5xl font-black mt-2">{{.TotalActive}}</span>
+                <span class="text-xs mt-3 bg-blue-700 px-3 py-1 rounded-full">Monitoring Live Real-time</span>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow border overflow-hidden">
+            <div class="px-6 py-4 bg-slate-100 border-b">
+                <h2 class="font-bold text-slate-700">Daftar Token Lisensi yang Terbit</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 font-semibold border-b">
+                            <th class="p-4">Customer/Toko</th>
+                            <th class="p-4">Token Lisensi</th>
+                            <th class="p-4">Paket</th>
+                            <th class="p-4">HWID Lock PC</th>
+                            <th class="p-4">Masa Berlaku</th>
+                            <th class="p-4">Status</th>
+                            <th class="p-4 text-center">Aksi Kontrol</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y text-slate-600">
+                        {{range .Licenses}}
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-4 font-bold text-slate-800">{{.CustomerName}}<br><span class="text-xs font-normal text-slate-400">{{.CustomerEmail}}</span></td>
+                            <td class="p-4"><span class="bg-slate-100 text-slate-800 font-mono px-2 py-1 rounded text-xs select-all">{{.Token}}</span></td>
+                            <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-semibold {{if eq .PlanType "TRIAL"}}bg-purple-100 text-purple-700{{else}}bg-blue-100 text-blue-700{{end}}">{{.PlanType}}</span></td>
+                            <td class="p-4 font-mono text-xs">{{if .Hwid}}{{.Hwid}}{{else}}<span class="text-slate-400 italic">Belum Bind PC</span>{{end}}</td>
+                            <td class="p-4 text-xs font-medium">{{.ExpiredAt.Format "2006-01-02 15:04"}}</td>
+                            <td class="p-4">
+                                <span class="px-2 py-0.5 rounded text-xs font-bold 
+                                {{if eq .Status "active"}}bg-emerald-100 text-emerald-700
+                                {{else if eq .Status "blocked"}}bg-red-100 text-red-700
+                                {{else}}bg-amber-100 text-amber-700{{end}}">
+                                    {{.Status}}
+                                </span>
+                            </td>
+                            <td class="p-4 flex gap-2 justify-center">
+                                <form action="/admin/license/reset/{{.ID}}" method="POST">
+                                    <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2 py-1 rounded font-semibold transition shadow-sm">Reset HWID</button>
+                                </form>
+                                <form action="/admin/license/block/{{.ID}}" method="POST">
+                                    <button type="submit" class="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded font-semibold transition shadow-sm {{if eq .Status "blocked"}}opacity-50 pointer-events-none{{end}}">Block</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
