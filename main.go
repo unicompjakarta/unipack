@@ -27,6 +27,9 @@ func main() {
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
 
+	// Tambahkan ini agar folder fisik di VPS bisa diakses via URL /downloads
+	app.Static("/downloads", "/var/www/unipack/downloads")
+
 	// --- ROUTING API (Ditembak oleh Desktop App & Web Checkout Front-end) ---
 	app.Post("/api/v1/check-license", handlers.CheckLicense)
 	app.Post("/api/v1/license/generate", handlers.GenerateTokenAction) // Endpoint checkout-ready
