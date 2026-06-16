@@ -108,7 +108,7 @@ func ConnectDB() {
 	log.Printf("🚀 Database '%s' Berhasil Terkoneksi.\n", dbName)
 
 	// 6. GORM AutoMigrate
-	err = db.AutoMigrate(&models.License{})
+	err = db.AutoMigrate(&models.License{}, &models.Packet{})
 	if err != nil {
 		log.Fatal("❌ Gagal melakukan AutoMigrate tabel: ", err)
 	}

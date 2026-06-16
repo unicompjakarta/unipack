@@ -10,60 +10,65 @@ import (
 
 // Endpoint yang ditembak oleh Aplikasi Desktop (.exe) Python
 func CheckLicense(c *fiber.Ctx) error {
-	type RequestBody struct {
+	type LicenseRequest struct {
 		Token string `json:"token"`
 		Hwid  string `json:"hwid"`
 	}
 
-	var body RequestBody
-	if err := c.BodyParser(&body); err != nil {
-		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "Bad Request"})
+	var req LicenseRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"status": "error", "message": "Invalid request payload"})
 	}
 
 	var license models.License
 	// Cari token di database
-	if err := database.DB.Where("token = ?", body.Token).First(&license).Error; err != nil {
-		return c.Status(404).JSON(fiber.Map{"status": "invalid", "message": "Token tidak ditemukan!"})
+	if err := database.DB.Where("token = ?", req.Token).First(&license).Error; err != nil {
+		return c.Status(200).JSON(fiber.Map{"status": "invalid", "message": "Token tidak ditemukan"})
 	}
 
-	// 1. Cek Status Blocked
-	if license.Status == "blocked" {
-		return c.Status(403).JSON(fiber.Map{"status": "blocked", "message": "Token diblokir oleh Owner!"})
+	// =================================================================
+	// 1. VALIDASI HWID DULUAN (Paling Aman)
+	// =================================================================
+	// Jika token sudah aktif tapi HWID yang menembak tidak sama dengan yang terdaftar
+	if license.Status == "active" && license.HWID != "" && license.HWID != req.Hwid {
+		return c.Status(200).JSON(fiber.Map{"status": "locked", "message": "Token sudah terkunci di PC lain!"})
 	}
 
-	// 2. Cek Kedaluwarsa
-	if license.Status == "active" && time.Now().After(license.ExpiredAt) {
-		license.Status = "expired"
-		database.DB.Save(&license)
-		return c.Status(401).JSON(fiber.Map{"status": "expired", "message": "Masa aktif token telah habis!"})
-	}
-
-	// 3. FASE AKTIVASI PERTAMA KALI (Jika status masih inactive)
-	if license.Status == "inactive" {
-		now := time.Now()
-		license.Hwid = body.Hwid
+	// =================================================================
+	// 2. PROSES AKTIVASI JIKA MASIH BARU (INACTIVE)
+	// =================================================================
+	if license.Status == "inactive" || license.HWID == "" {
+		license.HWID = req.Hwid
 		license.Status = "active"
+
+		// Tentukan masa aktif berdasarkan PlanType saat checkout web
+		now := time.Now()
 		license.ActivatedAt = &now
 
-		// Jika saat checkout/generate durasi expired belum diset, set otomatis di sini
-		if license.ExpiredAt.IsZero() {
-			if license.PlanType == "TRIAL" {
-				license.ExpiredAt = now.AddDate(0, 0, 7)
-			} else if license.PlanType == "MONTHLY" {
-				license.ExpiredAt = now.AddDate(0, 1, 0)
-			} else if license.PlanType == "YEARLY" {
-				license.ExpiredAt = now.AddDate(1, 0, 0)
-			}
+		var expiredAt time.Time
+		if license.PlanType == "TRIAL" {
+			expiredAt = now.AddDate(0, 0, 7)
+		} else { // BULANAN / MONTHLY / YEARLY
+			expiredAt = now.AddDate(0, 1, 0)
 		}
+		license.ExpiredAt = &expiredAt
 
-		database.DB.Save(&license)
-		return c.JSON(fiber.Map{"status": "active", "message": "Aktivasi sukses di PC pertama!"})
+		// Simpan perubahan aktivasi awal
+		if err := database.DB.Save(&license).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"status": "error", "message": "Gagal menyimpan aktivasi"})
+		}
 	}
 
-	// 4. FASE PENGECEKAN RUTIN (Harus mencocokkan HWID)
-	if license.Hwid != body.Hwid {
-		return c.Status(403).JSON(fiber.Map{"status": "failed", "message": "Token sudah terikat di perangkat lain!"})
-	}
+	// =================================================================
+	// 3. JIKA LOLOS SEMUA, UPDATE DATA SINKRONISASI
+	// =================================================================
+	now := time.Now()
+	// Gunakan struct update agar lebih aman dan efisien
+	database.DB.Model(&license).Update("last_sync_time", now)
 
-	return c.JSON(fiber.Map{"status": "active", "message": "Lisensi terverifikasi aktif."})
+	// Kirim response sukses beserta tanggal expired_at asli dari server VPS
+	return c.Status(200).JSON(fiber.Map{
+		"status":     "active",
+		"expired_at": license.ExpiredAt,
+	})
 }

@@ -47,15 +47,25 @@ func GetDashboard(c *fiber.Ctx) error {
 		return c.Redirect("/admin/login")
 	}
 
+	// 1. Tarik Data Lisensi
 	var licenses []models.License
 	database.DB.Order("id desc").Find(&licenses)
+
+	// 2. Tarik Data Paket (TAMBAHKAN INI BOS)
+	var packets []models.Packet
+	if err := database.DB.Find(&packets).Error; err != nil {
+		// Jika ada error saat tarik data paket, log atau handle di sini
+		packets = []models.Packet{}
+	}
 
 	// Hitung Statistik Mini
 	var totalActive int64
 	database.DB.Model(&models.License{}).Where("status = ?", "active").Count(&totalActive)
 
+	// 3. Masukkan "Packets" ke dalam Map Render (WAJIB Huruf P Kapital)
 	return c.Render("dashboard", fiber.Map{
 		"Licenses":    licenses,
+		"Packets":     packets, // SEKARANG TABLE PAKET DATA DIJAMIN MUNCUL!
 		"TotalActive": totalActive,
 	})
 }
@@ -84,15 +94,15 @@ func GenerateTokenAction(c *fiber.Ctx) error {
 		}
 	}
 
-	var expiredAt time.Time
-	now := time.Now()
-	if planType == "TRIAL" {
-		expiredAt = now.AddDate(0, 0, 7)
-	} else if planType == "MONTHLY" {
-		expiredAt = now.AddDate(0, 1, 0)
-	} else if planType == "YEARLY" {
-		expiredAt = now.AddDate(1, 0, 0)
-	}
+	// var expiredAt time.Time
+	// now := time.Now()
+	// if planType == "TRIAL" {
+	// 	expiredAt = now.AddDate(0, 0, 7)
+	// } else if planType == "MONTHLY" {
+	// 	expiredAt = now.AddDate(0, 1, 0)
+	// } else if planType == "YEARLY" {
+	// 	expiredAt = now.AddDate(1, 0, 0)
+	// }
 
 	newToken := models.License{
 		Token:         generateRandomToken(planType),
@@ -100,8 +110,8 @@ func GenerateTokenAction(c *fiber.Ctx) error {
 		CustomerEmail: customerEmail,
 		PlanType:      planType,
 		Status:        "inactive", // Menunggu diisi HWID saat kustomer aktivasi pertama kali di PC .exe
-		ExpiredAt:     expiredAt,
-		InvoiceID:     invoiceID,
+		// ExpiredAt:     &expiredAt,
+		InvoiceID: invoiceID,
 	}
 
 	database.DB.Create(&newToken)
@@ -131,7 +141,7 @@ func ResetHwidAction(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var license models.License
 	if err := database.DB.First(&license, id).Error; err == nil {
-		license.Hwid = ""
+		license.HWID = ""           // SEKARANG SUDAH FIX KAPITAL (HWID)
 		license.Status = "inactive" // Kembalikan ke inactive agar bisa mengunci HWID baru lagi
 		database.DB.Save(&license)
 	}

@@ -34,6 +34,10 @@ func main() {
 	app.Post("/api/v1/check-license", handlers.CheckLicense)
 	app.Post("/api/v1/license/generate", handlers.GenerateTokenAction) // Endpoint checkout-ready
 
+	app.Get("/admin/dashboard", handlers.GetDashboard)
+	app.Post("/admin/license/update", handlers.UpdateLicenseHandler)
+	app.Post("/admin/license/delete/:id", handlers.DeleteLicenseHandler)
+
 	// --- ROUTING WEB DASHBOARD (Ditembak oleh Browser Owner) ---
 	app.Get("/admin/login", handlers.GetLogin)
 	app.Post("/admin/login", handlers.PostLogin)
@@ -43,10 +47,15 @@ func main() {
 	app.Post("/admin/license/reset/:id", handlers.ResetHwidAction)
 	app.Get("/admin/logout", handlers.LogOut)
 
+	// --- ROUTING PACKET MANAGEMENT (DATABASE OPERATIONAL) ---
+	app.Post("/admin/packet/create", handlers.CreatePacketHandler)
+	app.Post("/admin/packet/update", handlers.UpdatePacketHandler)
+	app.Post("/admin/packet/delete/:id", handlers.DeletePacketHandler)
+	app.Get("/api/v1/packets", handlers.GetAllPacketsAPI) // Endpoint publik opsional
+
 	// --- ROUTING FRONT-END CHECKOUT (Disajikan langsung oleh Golang) ---
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Render("index", fiber.Map{})
-	})
+	// KODE BARU (Arahkan langsung ke fungsi yang sudah Anda buat di admin_panel.go)
+	app.Get("/", handlers.GetIndexPage)
 
 	log.Println("Server Golang berjalan otonom di port 3000, Bos!")
 	log.Fatal(app.Listen(":3000"))
