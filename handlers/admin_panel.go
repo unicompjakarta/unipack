@@ -71,20 +71,75 @@ func GetDashboard(c *fiber.Ctx) error {
 }
 
 // Aksi Manual Generate Token dari Dashboard (Dan Checkout Ready API)
+// func GenerateTokenAction(c *fiber.Ctx) error {
+// 	// 1. Ambil data dari form/request
+// 	customerName := c.FormValue("customer_name")
+// 	customerEmail := c.FormValue("customer_email")
+// 	customerPhone := c.FormValue("customer_phone") // Menambahkan field ini
+// 	planType := c.FormValue("plan_type")
+// 	invoiceID := c.FormValue("invoice_id")
+
+// 	// Fallback jika dipanggil via JSON API
+// 	if customerName == "" {
+// 		type ApiReq struct {
+// 			CustomerName  string `json:"customer_name"`
+// 			CustomerEmail string `json:"customer_email"`
+// 			CustomerPhone string `json:"customer_phone"` // Tambahkan di struct
+// 			PlanType      string `json:"plan_type"`
+// 			InvoiceID     string `json:"invoice_id"`
+// 		}
+// 		var apiData ApiReq
+// 		if err := c.BodyParser(&apiData); err == nil && apiData.CustomerName != "" {
+// 			customerName = apiData.CustomerName
+// 			customerEmail = apiData.CustomerEmail
+// 			customerPhone = apiData.CustomerPhone
+// 			planType = apiData.PlanType
+// 			invoiceID = apiData.InvoiceID
+// 		}
+// 	}
+
+// 	// 2. Simpan ke database
+// 	newToken := models.License{
+// 		Token:         generateRandomToken(planType),
+// 		CustomerName:  customerName,
+// 		CustomerEmail: customerEmail,
+// 		CustomerPhone: customerPhone, // Pastikan model.License punya field ini
+// 		PlanType:      planType,
+// 		Status:        "inactive",
+// 		InvoiceID:     invoiceID,
+// 	}
+
+// 	if err := database.DB.Create(&newToken).Error; err != nil {
+// 		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "Gagal menyimpan ke database"})
+// 	}
+
+// 	// 3. Respon sesuai tipe request
+// 	if c.Accepts("json") == "json" || c.Get("Content-Type") == "application/json" {
+// 		return c.JSON(fiber.Map{
+// 			"status": "success",
+// 			"token":  newToken.Token,
+// 		})
+// 	}
+
+// 	// Redirect PRG (Post-Redirect-Get) untuk mencegah double-post
+// 	return c.Redirect("/admin/dashboard", 302)
+// }
+
+// New
 func GenerateTokenAction(c *fiber.Ctx) error {
 	// 1. Ambil data dari form/request
 	customerName := c.FormValue("customer_name")
 	customerEmail := c.FormValue("customer_email")
-	customerPhone := c.FormValue("customer_phone") // Menambahkan field ini
+	customerPhone := c.FormValue("customer_phone")
 	planType := c.FormValue("plan_type")
 	invoiceID := c.FormValue("invoice_id")
 
-	// Fallback jika dipanggil via JSON API
+	// Fallback jika dipanggil via JSON API (misal dari script lain atau fetch)
 	if customerName == "" {
 		type ApiReq struct {
 			CustomerName  string `json:"customer_name"`
 			CustomerEmail string `json:"customer_email"`
-			CustomerPhone string `json:"customer_phone"` // Tambahkan di struct
+			CustomerPhone string `json:"customer_phone"`
 			PlanType      string `json:"plan_type"`
 			InvoiceID     string `json:"invoice_id"`
 		}
@@ -98,32 +153,42 @@ func GenerateTokenAction(c *fiber.Ctx) error {
 		}
 	}
 
-	// 2. Simpan ke database
+	// 2. Validasi Input (Opsional tapi disarankan)
+	if customerName == "" || planType == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Nama dan Paket wajib diisi!",
+		})
+	}
+
+	// 3. Simpan ke database
 	newToken := models.License{
 		Token:         generateRandomToken(planType),
 		CustomerName:  customerName,
 		CustomerEmail: customerEmail,
-		CustomerPhone: customerPhone, // Pastikan model.License punya field ini
+		CustomerPhone: customerPhone,
 		PlanType:      planType,
 		Status:        "inactive",
 		InvoiceID:     invoiceID,
 	}
 
 	if err := database.DB.Create(&newToken).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "Gagal menyimpan ke database"})
-	}
-
-	// 3. Respon sesuai tipe request
-	if c.Accepts("json") == "json" || c.Get("Content-Type") == "application/json" {
-		return c.JSON(fiber.Map{
-			"status": "success",
-			"token":  newToken.Token,
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Gagal menyimpan ke database: " + err.Error(),
 		})
 	}
 
-	// Redirect PRG (Post-Redirect-Get) untuk mencegah double-post
-	return c.Redirect("/admin/dashboard", 302)
+	// 4. SELALU KEMBALIKAN JSON
+	// Jangan lakukan redirect agar frontend bisa menangkap respon untuk Toast
+	return c.JSON(fiber.Map{
+		"status":  "success",
+		"token":   newToken.Token,
+		"message": "Token berhasil diterbitkan!",
+	})
 }
+
+//End
 
 // Aksi Blokir Token Kustomer Nakal
 func BlockTokenAction(c *fiber.Ctx) error {
