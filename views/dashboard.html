@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Owner - Unicomputer SaaS</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
 </head>
 <body class="bg-slate-50 min-h-screen pb-12">
 
@@ -299,6 +300,61 @@
             </form>
         </div>
     </div>
+
+
+   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.getElementById('licenseForm').addEventListener('submit', function(e) {
+    e.preventDefault(); 
+    const formData = new FormData(this);
+
+    // Animasi Loading
+    Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+    fetch('/admin/license/generate', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Mantap!',
+                text: 'Token baru berhasil diterbitkan.',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+
+            // Update Tabel Secara Instan
+            // Pastikan selector 'table tbody' sesuai dengan struktur tabel Bos
+            const tableBody = document.querySelector('table tbody');
+            const newRow = `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3 text-sm">${formData.get('customer_name')}<br><small class="text-slate-400">${formData.get('customer_email')}</small></td>
+                    <td class="p-3 text-sm font-mono font-bold text-blue-600">${data.token}</td>
+                    <td class="p-3 text-sm">${formData.get('plan_type')}</td>
+                    <td class="p-3 text-sm">-</td>
+                    <td class="p-3 text-sm"><span class="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs">INACTIVE</span></td>
+                    <td class="p-3 text-sm">...</td>
+                </tr>`;
+            tableBody.insertAdjacentHTML('afterbegin', newRow);
+            
+            // Reset form
+            this.reset();
+        } else {
+            Swal.fire('Gagal', data.message, 'error');
+        }
+    })
+    .catch(err => {
+        Swal.fire('Error', 'Terjadi kesalahan sistem.', 'error');
+    });
+});
+</script>
+
 
     <script>
         function editLicense(id, name, email, phone, plan) {
