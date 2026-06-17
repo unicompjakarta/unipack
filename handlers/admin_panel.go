@@ -72,16 +72,19 @@ func GetDashboard(c *fiber.Ctx) error {
 
 // Aksi Manual Generate Token dari Dashboard (Dan Checkout Ready API)
 func GenerateTokenAction(c *fiber.Ctx) error {
+	// 1. Ambil data dari form/request
 	customerName := c.FormValue("customer_name")
 	customerEmail := c.FormValue("customer_email")
-	planType := c.FormValue("plan_type")   // TRIAL, MONTHLY, YEARLY
-	invoiceID := c.FormValue("invoice_id") // Kosong jika manual, terisi jika via checkout web PG
+	customerPhone := c.FormValue("customer_phone") // Menambahkan field ini
+	planType := c.FormValue("plan_type")
+	invoiceID := c.FormValue("invoice_id")
 
-	// Fallback jika dipanggil via JSON API (Web Checkout Frontend)
+	// Fallback jika dipanggil via JSON API
 	if customerName == "" {
 		type ApiReq struct {
 			CustomerName  string `json:"customer_name"`
 			CustomerEmail string `json:"customer_email"`
+			CustomerPhone string `json:"customer_phone"` // Tambahkan di struct
 			PlanType      string `json:"plan_type"`
 			InvoiceID     string `json:"invoice_id"`
 		}
@@ -89,40 +92,37 @@ func GenerateTokenAction(c *fiber.Ctx) error {
 		if err := c.BodyParser(&apiData); err == nil && apiData.CustomerName != "" {
 			customerName = apiData.CustomerName
 			customerEmail = apiData.CustomerEmail
+			customerPhone = apiData.CustomerPhone
 			planType = apiData.PlanType
 			invoiceID = apiData.InvoiceID
 		}
 	}
 
-	// var expiredAt time.Time
-	// now := time.Now()
-	// if planType == "TRIAL" {
-	// 	expiredAt = now.AddDate(0, 0, 7)
-	// } else if planType == "MONTHLY" {
-	// 	expiredAt = now.AddDate(0, 1, 0)
-	// } else if planType == "YEARLY" {
-	// 	expiredAt = now.AddDate(1, 0, 0)
-	// }
-
+	// 2. Simpan ke database
 	newToken := models.License{
 		Token:         generateRandomToken(planType),
 		CustomerName:  customerName,
 		CustomerEmail: customerEmail,
+		CustomerPhone: customerPhone, // Pastikan model.License punya field ini
 		PlanType:      planType,
-		Status:        "inactive", // Menunggu diisi HWID saat kustomer aktivasi pertama kali di PC .exe
-		// ExpiredAt:     &expiredAt,
-		InvoiceID: invoiceID,
+		Status:        "inactive",
+		InvoiceID:     invoiceID,
 	}
 
-	database.DB.Create(&newToken)
+	if err := database.DB.Create(&newToken).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"status": "error", "message": "Gagal menyimpan ke database"})
+	}
 
-	// Jika request bertipe JSON (datang dari Web Checkout Frontend), kembalikan response JSON
+	// 3. Respon sesuai tipe request
 	if c.Accepts("json") == "json" || c.Get("Content-Type") == "application/json" {
-		return c.JSON(fiber.Map{"status": "success", "token": newToken.Token, "expired_at": newToken.ExpiredAt})
+		return c.JSON(fiber.Map{
+			"status": "success",
+			"token":  newToken.Token,
+		})
 	}
 
-	// Jika dari dashboard HTML UI, redirect kembali ke dashboard
-	return c.Redirect("/admin/dashboard")
+	// Redirect PRG (Post-Redirect-Get) untuk mencegah double-post
+	return c.Redirect("/admin/dashboard", 302)
 }
 
 // Aksi Blokir Token Kustomer Nakal
