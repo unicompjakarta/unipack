@@ -391,19 +391,20 @@ document.addEventListener("DOMContentLoaded", function() {
         console.log("Payload siap dikirim:", { nama, email, phone, plan, invoice });
 
         // 3. Tembak ke API backend Go Anda
-        const response = await fetch('http://localhost:3000/api/get-snap-token', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                customer_name: nama,
-                customer_email: email,
-                customer_phone: phone,
-                plan_type: plan,
-                invoice_id: invoice
-            })
-        });
+       //  YANG BENAR (Arahkan langsung ke domain VPS Go Anda):
+const response = await fetch('https://api.unicomputer.id/api/get-snap-token', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        customer_name: nama,
+        customer_email: email,
+        customer_phone: phone,
+        plan_type: plan,
+        invoice_id: invoice
+    })
+});
 
         // Cek jika HTTP status tidak 200-299
         if (!response.ok) {
