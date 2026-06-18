@@ -34,21 +34,28 @@ func MidtransCallbackHandler(c *fiber.Ctx) error {
 		var license models.License
 		// Cari data lisensi berdasarkan InvoiceID / OrderID
 		err := database.DB.Where("invoice_id = ?", notification.OrderID).First(&license).Error
+
+		// 🚀 PERBAIKAN DI SINI BOS:
 		if err != nil {
-			return c.Status(404).JSON(fiber.Map{"message": "Data lisensi tidak ditemukan"})
+			fmt.Printf("Peringatan: Order ID %s tidak terdaftar di DB (Abaikan jika ini tes Midtrans)\n", notification.OrderID)
+			// Tetap kembalikan 200 OK agar Midtrans tidak komplain/mengirim email error
+			return c.Status(200).JSON(fiber.Map{
+				"status":  "ok",
+				"message": "Test notification received, but order not found in DB",
+			})
 		}
 
-		// Jika status saat ini masih inactive, kita ganti jadi ACTIVE
+		// Jika status ketemu dan masih inactive, kita ganti jadi ACTIVE
 		if license.Status != "ACTIVE" {
 			license.Status = "ACTIVE"
 			database.DB.Save(&license)
 
-			// 3. 🚀 KIRIM TOKEN LANGSUNG KE EMAIL CUSTOMER
+			// 3. Kirim token langsung ke email customer
 			go sendTokenEmail(license.CustomerEmail, license.CustomerName, license.Token, license.PlanType)
 		}
 	}
 
-	// Midtrans hanya butuh response HTTP 200 OK sebagai tanda callback sukses diterima
+	// Response default sukses untuk Midtrans
 	return c.Status(200).JSON(fiber.Map{"status": "ok"})
 }
 
