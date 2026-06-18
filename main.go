@@ -57,6 +57,13 @@ func main() {
 	// KODE BARU (Arahkan langsung ke fungsi yang sudah Anda buat di admin_panel.go)
 	app.Get("/", handlers.GetIndexPage)
 
+	//Checkout
+
+	app.Post("/api/get-snap-token", handlers.GenerateTokenAction)
+
+	// 🚀 RUTE BARU: Callback/Webhook Penangkap QRIS Sukses dari Midtrans
+	app.Post("/api/midtrans-callback", handlers.MidtransCallbackHandler)
+
 	log.Println("Server Golang berjalan otonom di port 3000, Bos!")
 	log.Fatal(app.Listen(":3000"))
 }

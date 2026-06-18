@@ -128,10 +128,27 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border overflow-hidden w-full">
+         <!-- <div class="bg-white rounded-xl shadow-sm border overflow-hidden w-full">
             <div class="px-6 py-4 bg-slate-50 border-b flex justify-between items-center">
-                <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wide">📋 Daftar Token Lisensi yang Terbit</h2>
-                <span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">Live Database</span>
+               
+                <div class="px-6 py-4 bg-slate-50 border-b grid grid-cols-1 md:grid-cols-3 gap-4">
+                <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wide flex items-center">📋 Daftar Token Lisensi</h2>
+                
+                <div class="flex gap-2">
+                        <select id="filterPaket" onchange="filterTable()" class="px-3 py-1.5 border rounded-lg text-xs w-full">
+                            <option value="">Semua Paket</option>
+                            <option value="TRIAL">TRIAL</option>
+                            <option value="BULANAN">BULANAN</option>
+                        </select>
+                        <select id="filterStatus" onchange="filterTable()" class="px-3 py-1.5 border rounded-lg text-xs w-full">
+                            <option value="">Semua Status</option>
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                 </div>
+
+                <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cari nama, token, atau HWID..."  class="px-3 py-1.5 border rounded-lg text-xs w-full focus:outline-blue-500">
+            </div>
             </div>
             <div class="overflow-x-auto w-full">
                 <table class="w-full text-left border-collapse text-sm">
@@ -195,7 +212,82 @@
                     </tbody>
                 </table>
             </div>
+        </div>  -->
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden w-full">
+    <div class="px-6 py-4 bg-slate-50 border-b grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+        <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wide flex items-center">
+            📋 Daftar Token Lisensi
+        </h2>
+        
+        <div class="flex gap-2">
+            <select id="filterPaket" onchange="filterTable()" class="px-3 py-1.5 border rounded-lg text-xs w-full">
+                <option value="">Semua Paket</option>
+                <option value="TRIAL">TRIAL</option>
+                <option value="BULANAN">BULANAN</option>
+            </select>
+            <select id="filterStatus" onchange="filterTable()" class="px-3 py-1.5 border rounded-lg text-xs w-full">
+                <option value="">Semua Status</option>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="INACTIVE">INACTIVE</option>
+            </select>
         </div>
+
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cari nama, token, atau HWID..." 
+               class="px-3 py-1.5 border rounded-lg text-xs w-full focus:outline-blue-500">
+    </div>
+
+    <div class="overflow-x-auto w-full">
+        <table class="w-full text-left border-collapse text-sm">
+            <thead>
+                <tr class="bg-slate-50/50 text-slate-500 text-xs font-bold uppercase border-b">
+                    <th class="p-4">Customer/Toko</th>
+                    <th class="p-4">Token Lisensi</th>
+                    <th class="p-4">Paket</th>
+                    <th class="p-4">HWID Lock PC</th>
+                    <th class="p-4">Status</th>
+                    <th class="p-4 text-center">Aksi Kontrol</th>
+                </tr>
+            </thead>
+            <tbody id="licenseTableBody" class="divide-y text-slate-600">
+                {{range .Licenses}}
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4">
+                        <div class="font-bold text-slate-800">{{.CustomerName}}</div>
+                        <div class="text-xs font-normal text-slate-400">{{.CustomerEmail}}</div>
+                        <div class="text-xs font-medium text-teal-600 mt-0.5">📞 {{.CustomerPhone}}</div>
+                    </td>
+                    <td class="p-4">
+                        <span class="bg-slate-100 text-slate-800 font-mono px-2 py-1 rounded text-xs select-all border">{{.Token}}</span>
+                    </td>
+                    <td class="p-4">
+                        <span class="px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-blue-100 text-blue-700">{{.PlanType}}</span>
+                    </td>
+                    <td class="p-4 font-mono text-xs text-slate-500">
+                        {{if .HWID}}{{.HWID}}{{else}}<span class="text-slate-400 italic bg-slate-50 px-1.5 py-0.5 rounded border">Belum Bind PC</span>{{end}}
+                    </td>
+                    <td class="p-4">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-700">{{.Status}}</span>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex gap-1 justify-center items-center">
+                            <form action="/admin/license/reset/{{.ID}}" method="POST" class="inline m-0">
+                                <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white text-[11px] px-2.5 py-1 rounded font-bold transition shadow-sm">Reset</button>
+                            </form>
+                            <form action="/admin/license/block/{{.ID}}" method="POST" class="inline m-0">
+                                <button type="submit" class="bg-slate-600 hover:bg-slate-700 text-white text-[11px] px-2.5 py-1 rounded font-bold transition shadow-sm">Block</button>
+                            </form>
+                            <button type="button" onclick="editLicense('{{.ID}}', '{{.CustomerName}}', '{{.CustomerEmail}}', '{{.CustomerPhone}}', '{{.PlanType}}')" class="bg-blue-500 hover:bg-blue-600 text-white text-[11px] px-2.5 py-1 rounded font-bold transition shadow-sm">Edit</button>
+                            <form action="/admin/license/delete/{{.ID}}" method="POST" onsubmit="return confirm('Bos, yakin mau hapus permanent lisensi {{.CustomerName}}?');" class="inline m-0">
+                                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white text-[11px] px-2.5 py-1 rounded font-bold transition shadow-sm">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
 
     </div>
 
@@ -307,12 +399,13 @@
 <script>
 document.getElementById('licenseForm').addEventListener('submit', function(e) {
     e.preventDefault(); 
+    
+    const formAction = this.getAttribute('action'); 
     const formData = new FormData(this);
 
-    // Animasi Loading
     Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
-    fetch('/admin/license/generate', {
+    fetch(formAction, {
         method: 'POST',
         body: formData
     })
@@ -321,30 +414,39 @@ document.getElementById('licenseForm').addEventListener('submit', function(e) {
         if(data.status === 'success') {
             Swal.fire({
                 icon: 'success',
-                title: 'Mantap!',
-                text: 'Token baru berhasil diterbitkan.',
+                title: 'Berhasil!',
+                text: data.message,
                 toast: true,
                 position: 'top-end',
                 showConfirmButton: false,
                 timer: 3000
             });
 
-            // Update Tabel Secara Instan
-            // Pastikan selector 'table tbody' sesuai dengan struktur tabel Bos
-            const tableBody = document.querySelector('table tbody');
-            const newRow = `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-3 text-sm">${formData.get('customer_name')}<br><small class="text-slate-400">${formData.get('customer_email')}</small></td>
-                    <td class="p-3 text-sm font-mono font-bold text-blue-600">${data.token}</td>
-                    <td class="p-3 text-sm">${formData.get('plan_type')}</td>
-                    <td class="p-3 text-sm">-</td>
-                    <td class="p-3 text-sm"><span class="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs">INACTIVE</span></td>
-                    <td class="p-3 text-sm">...</td>
+            if(formAction === '/admin/license/generate') {
+                // PERBAIKAN: Gunakan ID spesifik 'licenseTableBody'
+                const tableBody = document.getElementById('licenseTableBody');
+                
+                const newRow = `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4">
+                        <div class="font-bold text-slate-800">${formData.get('customer_name')}</div>
+                        <div class="text-xs font-normal text-slate-400">${formData.get('customer_email')}</div>
+                        <div class="text-xs font-medium text-teal-600 mt-0.5">📞 ${formData.get('customer_phone') || ''}</div>
+                    </td>
+                    <td class="p-4"><span class="bg-slate-100 text-slate-800 font-mono px-2 py-1 rounded text-xs select-all border">${data.token}</span></td>
+                    <td class="p-4"><span class="px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-blue-100 text-blue-700">${formData.get('plan_type')}</span></td>
+                    <td class="p-4 font-mono text-xs text-slate-500"><span class="text-slate-400 italic bg-slate-50 px-1.5 py-0.5 rounded border">Belum Bind PC</span></td>
+                    <td class="p-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-700">INACTIVE</span></td>
+                    <td class="p-4">
+                        <div class="flex gap-1 justify-center items-center text-xs text-slate-400">Data baru perlu refresh untuk kontrol penuh</div>
+                    </td>
                 </tr>`;
-            tableBody.insertAdjacentHTML('afterbegin', newRow);
-            
-            // Reset form
-            this.reset();
+                
+                tableBody.insertAdjacentHTML('afterbegin', newRow);
+                this.reset();
+            } else {
+                location.reload();
+            }
         } else {
             Swal.fire('Gagal', data.message, 'error');
         }
@@ -397,5 +499,46 @@ document.getElementById('licenseForm').addEventListener('submit', function(e) {
         function openPacketModal() { document.getElementById('packetModal').classList.remove('hidden'); }
         function closePacketModal() { document.getElementById('packetModal').classList.add('hidden'); }
     </script>
+
+
+<!--Blok Search dan filter-->
+<script>
+function filterTable() {
+    const searchInput = document.getElementById("searchInput").value.toLowerCase().trim();
+    const filterPaket = document.getElementById("filterPaket").value.toUpperCase().trim();
+    const filterStatus = document.getElementById("filterStatus").value.toUpperCase().trim();
+    
+    const rows = document.getElementById("licenseTableBody").getElementsByTagName("tr");
+
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        
+        // Menggunakan trim() untuk membersihkan spasi di awal/akhir teks
+        const customerText = row.cells[0].textContent.toLowerCase().trim();
+        const tokenText = row.cells[1].textContent.toLowerCase().trim();
+        const paketText = row.cells[2].textContent.toUpperCase().trim();
+        const hwidText = row.cells[3].textContent.toLowerCase().trim();
+        const statusText = row.cells[4].textContent.toUpperCase().trim(); // Status ada di index 4
+
+        // Debug log (Bisa Bos lihat di Inspect Element > Console)
+        // console.log("Row Status:", statusText, "Filter:", filterStatus);
+
+        const matchesSearch = customerText.includes(searchInput) || 
+                              tokenText.includes(searchInput) || 
+                              hwidText.includes(searchInput);
+        
+        const matchesPaket = (filterPaket === "" || paketText === filterPaket);
+        
+        // PERBAIKAN: Menggunakan === agar lebih akurat daripada includes untuk status
+        const matchesStatus = (filterStatus === "" || statusText === filterStatus);
+
+        if (matchesSearch && matchesPaket && matchesStatus) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    }
+}
+</script>
 </body>
 </html>

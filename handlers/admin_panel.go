@@ -127,64 +127,71 @@ func GetDashboard(c *fiber.Ctx) error {
 
 // New
 func GenerateTokenAction(c *fiber.Ctx) error {
-	// 1. Ambil data dari form/request
-	customerName := c.FormValue("customer_name")
-	customerEmail := c.FormValue("customer_email")
-	customerPhone := c.FormValue("customer_phone")
-	planType := c.FormValue("plan_type")
-	invoiceID := c.FormValue("invoice_id")
+	// 1. Definisikan struct penampung request JSON (Sesuai payload frontend Anda)
+	var p Payload
 
-	// Fallback jika dipanggil via JSON API (misal dari script lain atau fetch)
-	if customerName == "" {
-		type ApiReq struct {
-			CustomerName  string `json:"customer_name"`
-			CustomerEmail string `json:"customer_email"`
-			CustomerPhone string `json:"customer_phone"`
-			PlanType      string `json:"plan_type"`
-			InvoiceID     string `json:"invoice_id"`
-		}
-		var apiData ApiReq
-		if err := c.BodyParser(&apiData); err == nil && apiData.CustomerName != "" {
-			customerName = apiData.CustomerName
-			customerEmail = apiData.CustomerEmail
-			customerPhone = apiData.CustomerPhone
-			planType = apiData.PlanType
-			invoiceID = apiData.InvoiceID
-		}
+	// Parsing data JSON yang dikirim oleh frontend fetch
+	if err := c.BodyParser(&p); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Format request tidak valid: " + err.Error(),
+		})
 	}
 
-	// 2. Validasi Input (Opsional tapi disarankan)
-	if customerName == "" || planType == "" {
+	// 2. Validasi Input Dasar
+	if p.CustomerName == "" || p.PlanType == "" {
 		return c.Status(400).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Nama dan Paket wajib diisi!",
 		})
 	}
 
-	// 3. Simpan ke database
-	newToken := models.License{
-		Token:         generateRandomToken(planType),
-		CustomerName:  customerName,
-		CustomerEmail: customerEmail,
-		CustomerPhone: customerPhone,
-		PlanType:      planType,
-		Status:        "inactive",
-		InvoiceID:     invoiceID,
-	}
+	// 3. LOGIKA PEMISAHAN PAKET
+	if p.PlanType == "TRIAL" {
+		// --- JIKA TRIAL: Langsung Generate & Aktifkan ---
+		// Kita gunakan fungsi generateUniqueToken() yang sudah ada di paket_licensi.go Anda
+		token := generateUniqueToken()
 
-	if err := database.DB.Create(&newToken).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"status":  "error",
-			"message": "Gagal menyimpan ke database: " + err.Error(),
+		newToken := models.License{
+			Token:         token,
+			CustomerName:  p.CustomerName,
+			CustomerEmail: p.CustomerEmail,
+			CustomerPhone: p.CustomerPhone,
+			PlanType:      p.PlanType,
+			Status:        "ACTIVE", // Langsung aktif karena trial
+			InvoiceID:     p.InvoiceID,
+		}
+
+		if err := database.DB.Create(&newToken).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"status":  "error",
+				"message": "Gagal menyimpan token trial: " + err.Error(),
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"status":  "success",
+			"token":   token,
+			"message": "Token Trial berhasil diaktifkan!",
 		})
 	}
 
-	// 4. SELALU KEMBALIKAN JSON
-	// Jangan lakukan redirect agar frontend bisa menangkap respon untuk Toast
+	// --- JIKA BUKAN TRIAL: Mintakan Token Snap ke Midtrans ---
+	// Menggunakan fungsi getSnapTokenFromMidtrans yang ada di utils.go kita kemarin
+	snapToken := getSnapTokenFromMidtrans(p)
+
+	if snapToken == "" {
+		return c.Status(500).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Gagal mendapatkan token pembayaran dari Midtrans",
+		})
+	}
+
+	// Mengembalikan snap_token agar frontend memunculkan pop-up pembayaran Midtrans
 	return c.JSON(fiber.Map{
-		"status":  "success",
-		"token":   newToken.Token,
-		"message": "Token berhasil diterbitkan!",
+		"status":     "success",
+		"snap_token": snapToken,
+		"message":    "Silakan selesaikan pembayaran Anda",
 	})
 }
 

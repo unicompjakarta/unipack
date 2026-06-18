@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UniPacking Recorder - Solusi Otomasi Meja Packing</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://app.midtrans.com/snap/snap.js" data-client-key="Mid-client-I07KJpfTVtJvNAm3"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen antialiased selection:bg-blue-500 selection:text-white">
 
@@ -317,54 +318,134 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
-        async function prosesCheckout(event) {
-            event.preventDefault();
+    //     async function prosesCheckout(event) {
+    //         event.preventDefault();
             
-            const btn = document.getElementById("btnCheckout");
-            const customerName = document.getElementById("customer_name").value;
-            const customerEmail = document.getElementById("customer_email").value;
-            const planType = document.querySelector('input[name="plan_type"]:checked').value;
-            const invoiceId = document.getElementById("summary_invoice").innerText;
+    //         const btn = document.getElementById("btnCheckout");
+    //         const customerName = document.getElementById("customer_name").value;
+    //         const customerEmail = document.getElementById("customer_email").value;
+    //         const planType = document.querySelector('input[name="plan_type"]:checked').value;
+    //         const invoiceId = document.getElementById("summary_invoice").innerText;
 
-            // Animasi Loading Tombol
-            btn.disabled = true;
-            btn.innerText = "⏳ SEDANG MEMPROSES LISENSI...";
-            btn.classList.add("opacity-50");
+    //         // Animasi Loading Tombol
+    //         btn.disabled = true;
+    //         btn.innerText = "⏳ SEDANG MEMPROSES LISENSI...";
+    //         btn.classList.add("opacity-50");
 
-            const payload = {
-                customer_name: customerName,
-                customer_email: customerEmail,
-                plan_type: planType,
-                invoice_id: invoiceId
-            };
+    //         const payload = {
+    //             customer_name: customerName,
+    //             customer_email: customerEmail,
+    //             plan_type: planType,
+    //             invoice_id: invoiceId
+    //         };
 
-            try {
-                const response = await fetch(BACKEND_URL, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(payload)
-                });
+    //         try {
+    //             const response = await fetch(BACKEND_URL, {
+    //                 method: "POST",
+    //                 headers: {
+    //                     "Content-Type": "application/json"
+    //                 },
+    //                 body: JSON.stringify(payload)
+    //             });
 
-                const data = await response.json();
+    //             const data = await response.json();
 
-                if (response.ok && data.token) {
-                    document.getElementById("generatedTokenDisplay").innerText = data.token;
-                    document.getElementById("tokenModal").classList.remove("hidden");
-                } else {
-                alert("Gagal men-generate token: " + (data.message || "Terjadi kesalahan server."));
-            }
-        } catch (error) {
-            console.error("Error:", error);
-            alert("Tidak dapat terhubung ke server backend Golang, pastikan server Anda menyala!");
-        } finally {
-            // Ini sudah bersih dari karakter gaib, Bos
-            btn.disabled = false;
-            btn.innerText = "🔒 AMBIL TOKEN LISENSI SEKARANG";
-            btn.classList.remove("opacity-50");
+    //             if (response.ok && data.token) {
+    //                 document.getElementById("generatedTokenDisplay").innerText = data.token;
+    //                 document.getElementById("tokenModal").classList.remove("hidden");
+    //             } else {
+    //             alert("Gagal men-generate token: " + (data.message || "Terjadi kesalahan server."));
+    //         }
+    //     } catch (error) {
+    //         console.error("Error:", error);
+    //         alert("Tidak dapat terhubung ke server backend Golang, pastikan server Anda menyala!");
+    //     } finally {
+    //         // Ini sudah bersih dari karakter gaib, Bos
+    //         btn.disabled = false;
+    //         btn.innerText = "🔒 AMBIL TOKEN LISENSI SEKARANG";
+    //         btn.classList.remove("opacity-50");
+    //     }
+    // }
+
+  async function prosesCheckout(e) {
+    // 1. Mencegah reload halaman jika tombol berada di dalam tag <form>
+    if (e && e.preventDefault) e.preventDefault();
+    
+    console.log("Tombol checkout diklik, mulai memproses...");
+
+    try {
+        // 2. Ambil data dari form HTML dengan proteksi fallback agar tidak crash jika ID salah
+        const namaInput = document.getElementById('nama_toko') || document.querySelector('input[name="customer_name"]');
+        const emailInput = document.getElementById('email') || document.querySelector('input[name="customer_email"]');
+        const phoneInput = document.getElementById('whatsapp') || document.querySelector('input[name="customer_phone"]');
+        
+        // Ambil value, kalau elemennya ga ketemu otomatis pakai string kosong ""
+        const nama = namaInput ? namaInput.value : "Pembeli Tanpa Nama";
+        const email = emailInput ? emailInput.value : "email@default.com";
+        const phone = phoneInput ? phoneInput.value : "08123456789";
+        
+        // Ambil nilai plan yang aktif (sesuaikan dengan state UI Anda, ini contoh "BULANAN")
+        const plan = "BULANAN"; 
+        const invoice = "INV-" + Math.floor(Math.random() * 100000000);
+
+        console.log("Payload siap dikirim:", { nama, email, phone, plan, invoice });
+
+        // 3. Tembak ke API backend Go Anda
+        const response = await fetch('http://localhost:3000/api/get-snap-token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                customer_name: nama,
+                customer_email: email,
+                customer_phone: phone,
+                plan_type: plan,
+                invoice_id: invoice
+            })
+        });
+
+        // Cek jika HTTP status tidak 200-299
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Server returned status ${response.status}: ${errorText}`);
         }
+
+        const data = await response.json();
+        console.log("Respons Sukses dari Go:", data);
+
+        if (data.status === "success" && data.snap_token) {
+            // 4. Munculkan Pop-up Midtrans Snap
+            window.snap.pay(data.snap_token, {
+                onSuccess: function(result) { alert("Pembayaran sukses bos!"); console.log(result); },
+                onPending: function(result) { alert("Menunggu pembayaran..."); console.log(result); },
+                onError: function(result) { alert("Pembayaran gagal!"); console.log(result); },
+                onClose: function() { alert('Anda menutup kasir sebelum bayar.'); }
+            });
+        } else {
+            alert("Gagal memproses token: " + (data.message || "Unknown error"));
+        }
+
+    } catch (error) {
+        // Menampilkan error detail di console browser agar ketahuan line mana yang rusak
+        console.error("Detail Error Sistem:", error);
+        alert("Terjadi kesalahan sistem! Detail: " + error.message);
     }
+}
+// Fungsi terpisah untuk generate setelah bayar sukses
+async function generateLicense(payload) {
+    const res = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    
+    if (data.token) {
+        document.getElementById("generatedTokenDisplay").innerText = data.token;
+        document.getElementById("tokenModal").classList.remove("hidden");
+    }
+}
 
         function tutupModal() {
             document.getElementById("tokenModal").classList.add("hidden");
