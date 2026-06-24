@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"backend-golang/database"
+	"backend-golang/models"
 	"fmt"
 	"math/rand"
 	"os"
@@ -24,28 +26,25 @@ func generateRandomString(n int) string {
 // 2. Fungsi request token Snap Midtrans menggunakan data Payload asli Anda
 func getSnapTokenFromMidtrans(p Payload) string {
 	var s snap.Client
-	// Silakan ganti dengan Server Key Sandbox Midtrans Anda
-
-	// Ganti baris lama Bos menjadi ini:
 	s.New(os.Getenv("MIDTRANS_SERVER_KEY"), midtrans.Production)
 
-	// LOGIKA PENENTUAN HARGA BERDASARKAN PLAN TYPE
-	var harga int
-	switch p.PlanType {
-	case "PRO":
-		harga = 150000 // Contoh: Rp 150.000 (Sesuaikan nilainya sendiri bos)
-	case "PREMIUM":
-		harga = 300000 // Contoh: Rp 300.000 (Sesuaikan nilainya sendiri bos)
-	default:
-		harga = 50000 // Harga standar jika tipe plan tidak sesuai
+	// 🚀 1. Ambil harga asli paket langsung dari database VPS bos (Aman dari manipulasi frontend)
+	var masterPlan models.Packet // sesuaikan nama struct table plan Anda
+	err := database.DB.Where("name = ?", p.PlanType).First(&masterPlan).Error
+
+	var harga int64
+	if err != nil {
+		// Fallback jika nama plan tidak terdaftar di DB
+		harga = 50000
+	} else {
+		harga = masterPlan.Price // Ambil nominal harga asli dari data server
 	}
 
 	req := &snap.Request{
 		TransactionDetails: midtrans.TransactionDetails{
 			OrderID:  p.InvoiceID,
-			GrossAmt: int64(harga),
+			GrossAmt: harga, // 👈 Nominal otomatis dinamis dan aman!
 		},
-		// ⚠️ PERBAIKAN DI SINI: Pasang langsung tanpa pointer ke snap, melainkan struct dari midtrans core
 		CustomerDetail: &midtrans.CustomerDetails{
 			FName: p.CustomerName,
 			Email: p.CustomerEmail,
