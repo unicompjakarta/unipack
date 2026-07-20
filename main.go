@@ -1,8 +1,8 @@
 package main
 
 import (
-	"backend-golang/database"
-	"backend-golang/handlers"
+	"compro/backend-golang/database" // Harus diawali dengan nama modul di go.mod
+	"compro/backend-golang/handlers"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,6 +29,114 @@ func main() {
 
 	// Tambahkan ini agar folder fisik di VPS bisa diakses via URL /downloads
 	app.Static("/downloads", "/var/www/unipack/downloads")
+
+	app.Static("/uploads", "./uploads")
+
+	// 4. REGISTER ENDPOINT CMS BARU UNTUK NUXT
+	cmsHandler := handlers.NewCMSHandler(database.DB)
+
+	api := app.Group("/api")
+
+	// Endpoint navigasi menu FE
+	api.Post("/menus", cmsHandler.CreateMenu)
+	api.Get("/menus", cmsHandler.GetMenus)
+
+	// Endpoint sub menu
+	api.Get("/navbar", cmsHandler.GetNavbarMenus)
+
+	// Endpoint footer
+	//app.Get("/api/menus", cmsHandler.GetFooterMenus)
+
+	// Endpoint builder page dinamis
+	api.Post("/pages", cmsHandler.CreatePage)
+
+	// 1. Ambil SEMUA halaman untuk tabel admin Bos (Menggunakan fungsi baru)
+	api.Get("/pages", cmsHandler.GetAllPages)
+
+	// 2. Ambil SATU halaman berdasarkan parameter slug (Fungsi catch-all milik Bos)
+	// api.Get("/pages/*", cmsHandler.GetPageBySlug) yang lama
+	api.Get("/pages/:slug", cmsHandler.GetPageBySlug)
+
+	api.Put("/pages/:id", cmsHandler.UpdatePage)
+	api.Delete("/pages/:id", cmsHandler.DeletePage)
+
+	//END Blok APP Web
+
+	// Route Single Row Konfigurasi Web Profile
+	app.Get("/web-profile", cmsHandler.GetWebProfile)
+	app.Post("/web-profile", cmsHandler.SaveWebProfile)
+
+	// Endpoint Pengumuman
+
+	
+
+
+	//Endpoint Konsultasi
+	app.Post("/consultation", cmsHandler.CreateConsultation)
+    app.Get("/admin/consultations", cmsHandler.GetConsultations)
+	app.Put("/admin/consultations/:id/status", cmsHandler.UpdateConsultationStatus)
+    app.Delete("/admin/consultations/:id", cmsHandler.DeleteConsultation)
+
+	// ==================== APP ROUTING REGISTRATION ====================
+	
+	// API Master Brands
+	app.Get("/admin/brands", cmsHandler.GetBrands)
+	app.Post("/admin/brands", cmsHandler.CreateBrand)
+	app.Put("/admin/brands/:id", cmsHandler.UpdateBrand)
+	app.Delete("/admin/brands/:id", cmsHandler.DeleteBrand)
+
+	// API Master Categories
+	app.Get("/admin/categories", cmsHandler.GetCategories)
+
+	// API Master Symptoms (Kerusakan)
+	app.Get("/admin/symptoms", cmsHandler.GetSymptoms)
+	app.Post("/admin/symptoms", cmsHandler.CreateSymptom)
+	app.Delete("/admin/symptoms/:id", cmsHandler.DeleteSymptom)
+
+	// Blok Jasa - Daftarkan route baru di bawah instance cmsHandler yang sudah ada:
+	app.Get("/admin/jasas", cmsHandler.GetJasas)
+	app.Post("/admin/jasas", cmsHandler.CreateJasa)
+	app.Put("/admin/jasas/:id", cmsHandler.UpdateJasa)
+	app.Delete("/admin/jasas/:id", cmsHandler.DeleteJasa)
+
+	app.Get("/admin/jasa-categories", cmsHandler.GetCategories)
+
+	//Layanan Kategori
+	app.Get("/layanancategory", cmsHandler.GetLayananCategories)
+
+	//Cek estimasi harga
+	app.Post("/public/estimasi", cmsHandler.CreatePublicConsultation)
+
+	//Blok Upload Foto
+	// app.Get("/api/announcements/active", cmsHandler.GetActiveAnnouncement)
+	// app.Post("/api/announcements", cmsHandler.SaveAnnouncement)
+	// app.Put("/api/announcements/:id/toggle", cmsHandler.ToggleActiveAnnouncement)
+	// app.Delete("/api/announcements/:id", cmsHandler.DeleteAnnouncement)
+	app.Get("/api/announcements", cmsHandler.GetAnnouncements)
+	app.Get("/api/announcements/active", cmsHandler.GetActiveAnnouncement) // 🔥 Sudah beres Bos!
+	app.Post("/api/announcements", cmsHandler.SaveAnnouncement)
+	app.Put("/api/announcements/:id/toggle", cmsHandler.ToggleActiveAnnouncement)
+	app.Delete("/api/announcements/:id", cmsHandler.DeleteAnnouncement)
+	//End Upload
+
+
+	// ==================== APP SECTION PRODUK ====================
+	api.Get("/categories", cmsHandler.GetProductCategories) 
+    api.Post("/categories", cmsHandler.CreateCategory)
+    // Products Endpoints
+	api.Get("/products", cmsHandler.GetProducts)
+	api.Post("/products", cmsHandler.CreateProduct)
+	api.Put("/products/:id", cmsHandler.UpdateProduct)
+	api.Delete("/products/:id", cmsHandler.DeleteProduct)
+
+
+	// ==================== SWITCH ON OFF SECTION ====================
+	api.Get("/product-section", cmsHandler.GetProductSectionStatus)
+    api.Post("/product-section", cmsHandler.UpdateProductSectionStatus)
+
+
+
+
 
 	// --- ROUTING API (Ditembak oleh Desktop App & Web Checkout Front-end) ---
 	app.Post("/api/v1/check-license", handlers.CheckLicense)

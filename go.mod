@@ -1,4 +1,4 @@
-module backend-golang
+module compro/backend-golang
 
 go 1.26.4
 

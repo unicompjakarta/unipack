@@ -1,7 +1,7 @@
 // package database
 
 // import (
-// 	"backend-golang/models"
+// 	"compro/backend-golang/models"
 // 	"fmt"
 // 	"log"
 
@@ -58,7 +58,7 @@
 package database
 
 import (
-	"backend-golang/models"
+	"compro/backend-golang/models"
 	"fmt"
 	"log"
 	"os"
@@ -108,7 +108,13 @@ func ConnectDB() {
 	log.Printf("🚀 Database '%s' Berhasil Terkoneksi.\n", dbName)
 
 	// 6. GORM AutoMigrate
-	err = db.AutoMigrate(&models.License{}, &models.Packet{})
+	err = db.AutoMigrate(&models.License{}, &models.Packet{}, &models.Menu{}, &models.Page{}, &models.PageComponent{},
+		&models.Announcement{}, &models.WebProfile{}, &models.WebHeaderImage{}, &models.Customer{},
+		&models.LaptopBrand{},
+		&models.LaptopType{},
+		&models.SerialLaptop{},
+		&models.CompatibleSparepart{},
+		&models.Consultation{}, &models.Category{}, &models.Symptom{},&models.Jasa{}, &models.LayananCategory{}, &models.Product{}, &models.ProductCategory{},&models.AppSetting{}  )
 	if err != nil {
 		log.Fatal("❌ Gagal melakukan AutoMigrate tabel: ", err)
 	}

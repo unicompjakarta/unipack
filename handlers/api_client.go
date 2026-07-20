@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"backend-golang/database"
-	"backend-golang/models"
+	"compro/backend-golang/database"
+	"compro/backend-golang/models"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
