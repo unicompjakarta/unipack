@@ -759,28 +759,61 @@ if err == gorm.ErrRecordNotFound {
 func (h *CMSHandler) GetConsultations(c *fiber.Ctx) error {
     var consultations []models.Consultation
 
-    // 🚀 Tambahkan Preload("Symptom") agar data gejala ikut ketarik ke frontend
-    err := h.DB.Preload("Customer").
-        Preload("LaptopType.Brand").
-        Preload("Symptom"). 
-        Order("created_at desc").
-        Find(&consultations).Error
+    // 1. Tangkap Query Parameters dari Frontend Nuxt
+    search := c.Query("search")
+    brand := c.Query("brand")
+    status := c.Query("status")
 
+    // 2. Inisialisasi Query GORM
+    dbQuery := h.DB.Model(&models.Consultation{}).
+        Preload("Customer").
+        Preload("LaptopType").
+        Preload("LaptopType.Brand").
+        Preload("Symptom")
+
+    // 3. Filter berdasarkan pencarian (nama customer, nomor HP, atau tipe laptop)
+    if search != "" {
+        searchTerm := "%" + search + "%"
+        dbQuery = dbQuery.Where(
+            "customer_name LIKE ? OR customer_phone LIKE ? OR laptop_type_name LIKE ?", 
+            searchTerm, searchTerm, searchTerm,
+        )
+    }
+
+    // 4. Filter berdasarkan Brand (jika diset)
+    if brand != "" {
+        dbQuery = dbQuery.Joins("JOIN laptop_types ON laptop_types.id = consultations.laptop_type_id").
+            Where("laptop_types.brand_id = ?", brand)
+    }
+
+    // 5. Filter berdasarkan Status (jika diset)
+    if status != "" {
+        dbQuery = dbQuery.Where("status = ?", status)
+    }
+
+    // 6. Hitung Total Data (Sebelum Limit/Find) untuk pagination/totalData di Vue
+    var total int64
+    dbQuery.Count(&total)
+
+    // 7. Eksekusi Query
+    err := dbQuery.Order("created_at desc").Find(&consultations).Error
     if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "success": false,
             "message": "Gagal mengambil data antrean",
+            "data":    []models.Consultation{},
+            "total":   0,
         })
     }
 
-    // 🌟 REVISI UTAMA: Kembalikan array murni langsung tanpa dibungkus objek
-    // Ini agar langsung sinkron dengan fungsi Array.isArray(resCons) di Vue Bos!
-    if len(consultations) == 0 {
-        return c.Status(fiber.StatusOK).JSON([]models.Consultation{})
-    }
-
-    return c.Status(fiber.StatusOK).JSON(consultations)
+    // 8. Kembalikan Response JSON yang Presisi dengan Total
+    return c.Status(fiber.StatusOK).JSON(fiber.Map{
+        "success": true,
+        "data":    consultations,
+        "total":   total,
+    })
 }
+
 // 1. Handler untuk update status konsultasi
 func (h *CMSHandler) UpdateConsultationStatus(c *fiber.Ctx) error {
 	id := c.Params("id")
