@@ -758,45 +758,57 @@ if err == gorm.ErrRecordNotFound {
 // 🚀 HANDLER GET: Tarik Semua Data untuk Halaman Management Admin
 func (h *CMSHandler) GetConsultations(c *fiber.Ctx) error {
     var consultations []models.Consultation
+    var total int64 = 0
 
-    // 1. Tangkap Query Parameters dari Frontend Nuxt
     search := c.Query("search")
     brand := c.Query("brand")
     status := c.Query("status")
 
-    // 2. Inisialisasi Query GORM
-    dbQuery := h.DB.Model(&models.Consultation{}).
-        Preload("Customer").
-        Preload("LaptopType").
-        Preload("LaptopType.Brand").
-        Preload("Symptom")
+    // 1. Buat Base Query yang MURNI dari tabel consultations
+    query := h.DB.Model(&models.Consultation{})
 
-    // 3. Filter berdasarkan pencarian (nama customer, nomor HP, atau tipe laptop)
+    // 2. Filter Search (jika ada)
     if search != "" {
         searchTerm := "%" + search + "%"
-        dbQuery = dbQuery.Where(
+        query = query.Where(
             "customer_name LIKE ? OR customer_phone LIKE ? OR laptop_type_name LIKE ?", 
             searchTerm, searchTerm, searchTerm,
         )
     }
 
-    // 4. Filter berdasarkan Brand (jika diset)
-    if brand != "" {
-        dbQuery = dbQuery.Joins("JOIN laptop_types ON laptop_types.id = consultations.laptop_type_id").
-            Where("laptop_types.brand_id = ?", brand)
-    }
-
-    // 5. Filter berdasarkan Status (jika diset)
+    // 3. Filter Status (jika ada)
     if status != "" {
-        dbQuery = dbQuery.Where("status = ?", status)
+        query = query.Where("status = ?", status)
     }
 
-    // 6. Hitung Total Data (Sebelum Limit/Find) untuk pagination/totalData di Vue
-    var total int64
-    dbQuery.Count(&total)
+    // 4. Filter Brand (jika ada)
+    if brand != "" {
+        query = query.Where("laptop_type_id IN (SELECT id FROM laptop_types WHERE brand_id = ?)", brand)
+    }
 
-    // 7. Eksekusi Query
-    err := dbQuery.Order("created_at desc").Find(&consultations).Error
+    // 🚀 HITUNG TOTAL ASLI DULU (Sebelum Preload/Joins agar Count-nya akurat & tidak melipatgandakan data)
+    if err := query.Count(&total).Error; err != nil {
+        total = 0
+    }
+
+    // Jika data memang 0, LANGSUNG RETURN response kosong! Jangan lanjut Preload.
+    if total == 0 {
+        return c.Status(fiber.StatusOK).JSON(fiber.Map{
+            "success": true,
+            "data":    []models.Consultation{},
+            "total":   0,
+        })
+    }
+
+    // 5. Eksekusi Ambil Data + Preload Relasi HANYA JIKA ADA DATA
+    err := query.
+        Preload("Customer").
+        Preload("LaptopType").
+        Preload("LaptopType.Brand").
+        Preload("Symptom").
+        Order("created_at desc").
+        Find(&consultations).Error
+
     if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "success": false,
@@ -806,7 +818,6 @@ func (h *CMSHandler) GetConsultations(c *fiber.Ctx) error {
         })
     }
 
-    // 8. Kembalikan Response JSON yang Presisi dengan Total
     return c.Status(fiber.StatusOK).JSON(fiber.Map{
         "success": true,
         "data":    consultations,
