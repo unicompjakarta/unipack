@@ -234,16 +234,44 @@ func (h *CMSHandler) GetNavbarMenus(c *fiber.Ctx) error {
 
 // === DYNAMIC PAGE BUILDER HANDLERS ===
 
+// func (h *CMSHandler) CreatePage(c *fiber.Ctx) error {
+// 	page := new(models.Page)
+// 	if err := c.BodyParser(page); err != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 	}
+
+// 	// GORM otomatis menyimpan data bertingkat (Page + Components sekaligus)
+// 	if err := h.DB.Create(&page).Error; err != nil {
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+// 	}
+// 	return c.Status(fiber.StatusCreated).JSON(page)
+// }
+
 func (h *CMSHandler) CreatePage(c *fiber.Ctx) error {
 	page := new(models.Page)
 	if err := c.BodyParser(page); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	// 🟢 SANITASI MENU_ID: Ubah 0 menjadi nil (NULL di MySQL)
+	if page.MenuID != nil && *page.MenuID == 0 {
+		page.MenuID = nil
+	}
+
+	// 🟢 (Optional Safety) Jika MenuID diisi angka selain 0, pastikan ID menu tersebut benar-benar ada di DB
+	if page.MenuID != nil {
+		var menuExists bool
+		h.DB.Model(&models.Menu{}).Select("count(*) > 0").Where("id = ?", *page.MenuID).Find(&menuExists)
+		if !menuExists {
+			page.MenuID = nil // Reset ke NULL kalau ID menunya gak ketemu di tabel menus
+		}
+	}
+
 	// GORM otomatis menyimpan data bertingkat (Page + Components sekaligus)
 	if err := h.DB.Create(&page).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
 	return c.Status(fiber.StatusCreated).JSON(page)
 }
 
@@ -352,7 +380,22 @@ func (h *CMSHandler) UpdatePage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Transaksi aman: Hapus komponen lama, ganti dengan susunan block komponen baru dari admin
+	// 🟢 2. SANITASI MENU_ID: Mencegah Foreign Key Constraint Error (1452)
+	// Jika MenuID bernilai 0 dari frontend, ubah ke nil (NULL di MySQL)
+	if newPageData.MenuID != nil && *newPageData.MenuID == 0 {
+		newPageData.MenuID = nil
+	}
+
+	// Jika MenuID diisi selain 0, pastikan ID menu tersebut benar-benar ada di tabel menus
+	if newPageData.MenuID != nil {
+		var menuExists bool
+		h.DB.Model(&models.Menu{}).Select("count(*) > 0").Where("id = ?", *newPageData.MenuID).Find(&menuExists)
+		if !menuExists {
+			newPageData.MenuID = nil // Fallback ke NULL jika menu ID tidak ditemukan
+		}
+	}
+
+	// 3. Transaksi aman: Hapus komponen lama, ganti dengan susunan block komponen baru dari admin
 	err := h.DB.Transaction(func(tx *gorm.DB) error {
 		// Hapus komponen lama bawaan page ini
 		if err := tx.Where("page_id = ?", id).Delete(&models.PageComponent{}).Error; err != nil {
@@ -364,7 +407,7 @@ func (h *CMSHandler) UpdatePage(c *fiber.Ctx) error {
 		newPageData.CreatedAt = existingPage.CreatedAt // Pasang kembali waktu buat aslinya agar tidak jadi 0000-00-00
 
 		// Gunakan Omit("created_at") sebagai proteksi ganda agar GORM mengabaikan kolom ini saat query UPDATE dijalankan
-		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Omit("created_at").Save(&newPageData).Error; err != nil {
+		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Omit("created_at").Save(newPageData).Error; err != nil {
 			return err
 		}
 		return nil
@@ -373,6 +416,7 @@ func (h *CMSHandler) UpdatePage(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+	
 	return c.JSON(fiber.Map{"status": "success", "message": "Page updated successfully"})
 }
 
