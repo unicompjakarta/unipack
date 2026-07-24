@@ -28,7 +28,8 @@ type Menu struct {
 // Page: Konten utama halaman dinamis
 type Page struct {
 	ID          uint            `gorm:"primaryKey" json:"id"`
-	MenuID      uint            `gorm:"not null;index" json:"menu_id"`
+	//MenuID      uint            `gorm:"not null;index" json:"menu_id"`
+	MenuID      *uint  `gorm:"default:null;index" json:"menu_id"`
 	Title       string          `gorm:"type:varchar(255);not null" json:"title"`
 	Slug        string          `gorm:"type:varchar(255);uniqueIndex;not null" json:"slug"`
 	Category    string          `gorm:"type:varchar(100);not null" json:"category"` // 'landing_page', 'article', dll

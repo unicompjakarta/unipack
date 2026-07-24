@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"compro/backend-golang/models"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -146,65 +147,51 @@ if err == nil && file != nil {
 func (h *CMSHandler) GetMenus(c *fiber.Ctx) error {
 	var allMenus []models.Menu
 
-	// 1. AMBIL SEMUA DATA TANPA FILTER POSITION
-	err := h.DB.Order("`order` asc").Find(&allMenus).Error
+	// 🟢 FIX 1: Ubah "Page" jadi "Pages" sesuai nama field di struct Menu
+	err := h.DB.Preload("Pages").Order("`order` asc").Find(&allMenus).Error
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	// 🟢 FIX 2: Cek len(m.Pages) > 0 karena m.Pages adalah Slice/Array ([]Page)
+	syncMenuSlug := func(m *models.Menu) {
+		if len(m.Pages) > 0 && m.Pages[0].Slug != "" {
+			m.Slug = m.Pages[0].Slug // 🎯 Ambil slug dari page pertama (botbot)
+		}
+	}
+
 	var finalResult []models.Menu
 
-	// 2. Looping 1: Ambil Parent Utama khusus Navbar  -- INI JALAN --
-	// for i := 0; i < len(allMenus); i++ {
-	// 	pos := strings.ToLower(strings.TrimSpace(allMenus[i].Position))
-	// 	if allMenus[i].ParentID == nil && pos == "navbar" {
-	// 		allMenus[i].Submenus = []models.Menu{}
-	// 		finalResult = append(finalResult, allMenus[i])
-	// 	}
-	// }
-
+	// 1. Parent Utama (navbar & sidebar)
 	for i := 0; i < len(allMenus); i++ {
-        pos := strings.ToLower(strings.TrimSpace(allMenus[i].Position))
-        // 💡 FIX: Izinkan 'sidebar' tingkat root masuk ke finalResult
-        if allMenus[i].ParentID == nil && (pos == "navbar" || pos == "sidebar") {
-            allMenus[i].Submenus = []models.Menu{}
-            finalResult = append(finalResult, allMenus[i])
-        }
-    }
+		pos := strings.ToLower(strings.TrimSpace(allMenus[i].Position))
+		if allMenus[i].ParentID == nil && (pos == "navbar" || pos == "sidebar") {
+			syncMenuSlug(&allMenus[i])
+			allMenus[i].Submenus = []models.Menu{}
+			finalResult = append(finalResult, allMenus[i])
+		}
+	}
 
-	// 3. Looping 2: Masukkan Submenu Navbar ke Parent yang tepat
+	// 2. Submenus
 	for i := 0; i < len(finalResult); i++ {
 		for j := 0; j < len(allMenus); j++ {
 			if allMenus[j].ParentID != nil && *allMenus[j].ParentID == finalResult[i].ID {
-				// 🎯 FIX SAKTI: Langsung append ke array Submenus dari index finalResult yang aktif
+				syncMenuSlug(&allMenus[j])
 				finalResult[i].Submenus = append(finalResult[i].Submenus, allMenus[j])
 			}
 		}
 	}
 
-	
-	// 4. Looping 3: Masukkan data posisi 'footer' dan 'body' langsung ke tingkat root
+	// 3. Footer & Body
 	for i := 0; i < len(allMenus); i++ {
 		pos := strings.ToLower(strings.TrimSpace(allMenus[i].Position))
 		if pos == "footer" || pos == "body" {
+			syncMenuSlug(&allMenus[i])
 			allMenus[i].Submenus = []models.Menu{}
 			finalResult = append(finalResult, allMenus[i])
 		}
 	}
-// 💡 TAMBAHKAN SCRIPT DEBUG INI SEBELUM RETURN JSON
-    fmt.Println("=========================================")
-    fmt.Printf("DEBUG: Total Menu di root (finalResult): %d\n", len(finalResult))
-    for _, m := range finalResult {
-        pos := strings.ToLower(strings.TrimSpace(m.Position))
-        fmt.Printf("- Menu Utama: %s [%s] | Submenu: %d\n", m.Name, pos, len(m.Submenus))
-        
-        // Cek isi submenunya jika ada
-        for _, sub := range m.Submenus {
-            subPos := strings.ToLower(strings.TrimSpace(sub.Position))
-            fmt.Printf("  └── Submenu: %s [%s]\n", sub.Name, subPos)
-        }
-    }
-    fmt.Println("=========================================")
+
 	return c.JSON(finalResult)
 }
 
@@ -277,50 +264,78 @@ func (h *CMSHandler) GetAllPages(c *fiber.Ctx) error {
 
 
 
+// func (h *CMSHandler) GetPageBySlug(c *fiber.Ctx) error {
+// 	// 💡 Ganti dari c.Params("*") menjadi c.Params("slug") agar sinkron dengan router baru
+// 	slug := c.Params("slug")
+
+// 	var page models.Page
+	
+// 	err := h.DB.Preload("Components", func(db *gorm.DB) *gorm.DB {
+//         return db.Order("page_components.order asc")
+//     }).
+//     Joins("JOIN menus ON menus.id = pages.menu_id").
+//     Where("menus.slug = ?", slug).
+//     First(&page).Error
+
+//     if err != nil {
+//         if err == gorm.ErrRecordNotFound {
+//             return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Halaman tidak ditemukan, Bos!"})
+//         }
+//         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+//     }
+
+
+// // 🎯 AMBIL SEMUA MENU BERPOSISI SIDEBAR (CARA B)
+//     var sidebarMenus []models.Menu
+//     _ = h.DB.Where("position = ? AND is_active = ?", "sidebar", true).
+//         Order("`order` asc").
+//         Find(&sidebarMenus).Error
+
+//     // 💡 REVISI FIX SAKTI: Gabungkan struct 'page' utuh dengan data sidebar
+//     return c.JSON(fiber.Map{
+//         "page":          page,          // Ini isinya tetap objek tunggal {...} dari struct page lu beserta Components-nya
+//         "sidebar_menus": sidebarMenus,  // Ini array menu sidebarnya
+//     })
+
+// 	// Ini akan mengembalikan Objek Tunggal {...} bukan Array [...]
+// 	//return c.JSON(page) ini jalan
+// }
 func (h *CMSHandler) GetPageBySlug(c *fiber.Ctx) error {
-	// 💡 Ganti dari c.Params("*") menjadi c.Params("slug") agar sinkron dengan router baru
+	// 💡 Ambil slug dari param router /api/pages/:slug
 	slug := c.Params("slug")
 
 	var page models.Page
-	// err := h.DB.Preload("Components", func(db *gorm.DB) *gorm.DB {
-	// 	return db.Order("page_components.order asc")
-	// }).Where("slug = ?", slug).First(&page).Error
 
-	// if err != nil {
-	// 	if err == gorm.ErrRecordNotFound {
-	// 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Halaman tidak ditemukan, Bos!"})
-	// 	}
-	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	// }
+	// 🟢 FIX UTAMA: Query langsung ke tabel `pages` berdasarkan `pages.slug`
+	// Hilangkan JOIN menus agar page dengan menu_id = NULL tetap terbaca sempurna
 	err := h.DB.Preload("Components", func(db *gorm.DB) *gorm.DB {
-        return db.Order("page_components.order asc")
-    }).
-    Joins("JOIN menus ON menus.id = pages.menu_id").
-    Where("menus.slug = ?", slug).
-    First(&page).Error
+		return db.Order("page_components.order asc")
+	}).
+		Where("pages.slug = ?", slug).
+		First(&page).Error
 
-    if err != nil {
-        if err == gorm.ErrRecordNotFound {
-            return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Halaman tidak ditemukan, Bos!"})
-        }
-        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-    }
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Halaman tidak ditemukan, Bos!",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
 
+	// 🎯 AMBIL SEMUA MENU BERPOSISI SIDEBAR
+	var sidebarMenus []models.Menu
+	_ = h.DB.Where("position = ? AND is_active = ?", "sidebar", true).
+		Order("`order` asc").
+		Find(&sidebarMenus).Error
 
-// 🎯 AMBIL SEMUA MENU BERPOSISI SIDEBAR (CARA B)
-    var sidebarMenus []models.Menu
-    _ = h.DB.Where("position = ? AND is_active = ?", "sidebar", true).
-        Order("`order` asc").
-        Find(&sidebarMenus).Error
-
-    // 💡 REVISI FIX SAKTI: Gabungkan struct 'page' utuh dengan data sidebar
-    return c.JSON(fiber.Map{
-        "page":          page,          // Ini isinya tetap objek tunggal {...} dari struct page lu beserta Components-nya
-        "sidebar_menus": sidebarMenus,  // Ini array menu sidebarnya
-    })
-
-	// Ini akan mengembalikan Objek Tunggal {...} bukan Array [...]
-	//return c.JSON(page) ini jalan
+	// 💡 Return gabungan data page & sidebar_menus
+	return c.JSON(fiber.Map{
+		"page":          page,          // Objek tunggal detail page & components
+		"sidebar_menus": sidebarMenus,  // Array menu sidebar
+	})
 }
 
 func (h *CMSHandler) UpdatePage(c *fiber.Ctx) error {
