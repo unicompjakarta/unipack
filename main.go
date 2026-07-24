@@ -33,7 +33,7 @@ func main() {
 	app.Static("/uploads", "./uploads")
 
 	// 4. REGISTER ENDPOINT CMS BARU UNTUK NUXT
-	cmsHandler := handlers.NewCMSHandler(database.DB)
+	cmsHandler := handlers.NewCMSHandler(database.DBNuxt)
 
 	api := app.Group("/api")
 
