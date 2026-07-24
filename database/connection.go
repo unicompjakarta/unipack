@@ -138,28 +138,29 @@ func ConnectDB() {
 	}
 
 	// 🔵 DB Nuxt (db_nuxt)
+	// 🔵 DB Nuxt (db_nuxt) - Total 19 Models
 	err = dbNuxtInstance.AutoMigrate(
-		// 1. Tabel Induk / Independent terlebih dahulu
+		// 1. Tabel Induk / Independent (Tanpa Foreign Key ke tabel lain)
 		&models.Announcement{},
 		&models.AppSetting{},
 		&models.Category{},
 		&models.Customer{},
 		&models.Jasa{},
-		&models.LaptopBrand{}, // Induk dari LaptopType
+		&models.LaptopBrand{},     // Induk dari LaptopType
 		&models.LayananCategory{},
 		&models.Menu{},
 		&models.Page{},
 		&models.PageComponent{},
-		&models.ProductCategory{},
+		&models.ProductCategory{}, // Induk dari Product
 		&models.Symptom{},
-		&models.WebHeaderImage{},
-		&models.WebProfile{},
+		&models.WebProfile{},      // Induk dari WebHeaderImage
 
-		// 2. Tabel Relasi Tingkat 1
-		&models.LaptopType{},  // Butuh LaptopBrand (dibuat setelah LaptopBrand)
-		&models.Product{},     // Butuh ProductCategory
+		// 2. Tabel Relasi Tingkat 1 (Butuh Induk di Atas)
+		&models.LaptopType{},      // Butuh LaptopBrand
+		&models.Product{},         // Butuh ProductCategory
+		&models.WebHeaderImage{},  // Butuh WebProfile
 
-		// 3. Tabel Relasi Tingkat 2 (Anak dari LaptopType)
+		// 3. Tabel Relasi Tingkat 2 (Butuh LaptopType / Sub-relasi)
 		&models.CompatibleSparepart{}, // Butuh LaptopType
 		&models.SerialLaptop{},        // Butuh LaptopType
 		&models.Consultation{},
@@ -167,7 +168,6 @@ func ConnectDB() {
 	if err != nil {
 		log.Fatal("❌ Gagal AutoMigrate DB Nuxt: ", err)
 	}
-
 	// 7. Assign ke variable global
 	DB = dbMainInstance
 	DBNuxt = dbNuxtInstance
