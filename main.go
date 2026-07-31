@@ -32,6 +32,10 @@ func main() {
 
 	app.Static("/uploads", "./uploads")
 
+	//upload image page
+	
+	
+
 	// 4. REGISTER ENDPOINT CMS BARU UNTUK NUXT
 	cmsHandler := handlers.NewCMSHandler(database.DBNuxt)
 
@@ -46,6 +50,8 @@ func main() {
 
 	// Endpoint footer
 	//app.Get("/api/menus", cmsHandler.GetFooterMenus)
+	//upload ima
+	api.Post("/uploads", cmsHandler.UploadImage)
 
 	// Endpoint builder page dinamis
 	api.Post("/pages", cmsHandler.CreatePage)

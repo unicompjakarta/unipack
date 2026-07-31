@@ -1634,6 +1634,63 @@ func (h *CMSHandler) UpdateProductSectionStatus(c *fiber.Ctx) error {
     return c.JSON(fiber.Map{"success": true, "message": "Status berhasil diperbarui"})
 }
 
+//Upload image
+// === STANDALONE UPLOAD HANDLER ===
+
+// UploadImage handles generic file/image uploads
+func (h *CMSHandler) UploadImage(c *fiber.Ctx) error {
+	// 1. Pastikan folder uploads tersedia
+	if err := os.MkdirAll("./uploads", 0755); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Gagal membuat folder upload",
+		})
+	}
+
+	// 2. Ambil file dari form-data dengan key "image" (atau "file")
+	file, err := c.FormFile("image")
+	if err != nil {
+		// Fallback cek key "file" jika frontend mengirim key "file"
+		file, err = c.FormFile("file")
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"success": false,
+				"error":   "File gambar tidak ditemukan dalam request",
+			})
+		}
+	}
+
+	// 3. Generate nama file unik
+	ext := filepath.Ext(file.Filename)
+	uniqueFilename := fmt.Sprintf("upload-%d-%s%s", time.Now().UnixNano(), uuid.New().String()[:8], ext)
+	filePath := filepath.Join("./uploads", uniqueFilename)
+
+	// 4. Simpan file ke server
+	if err := c.SaveFile(file, filePath); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Gagal menyimpan file gambar ke disk",
+		})
+	}
+
+	// 5. Susun URL balikan (Bisa berupa relatif atau absolute URL)
+	scheme := "http"
+	if c.Protocol() == "https" {
+		scheme = "https"
+	}
+	fullURL := fmt.Sprintf("%s://%s/uploads/%s", scheme, c.Hostname(), uniqueFilename)
+	relativeURL := fmt.Sprintf("/uploads/%s", uniqueFilename)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success":      true,
+		"message":      "File berhasil diupload",
+		"url":          fullURL,       // URL Lengkap (misal: http://localhost:3000/uploads/xxx.png)
+		"image_url":    fullURL,       // Alias
+		"relative_url": relativeURL,   // Path relatif (misal: /uploads/xxx.png)
+		"filename":     uniqueFilename,
+	})
+}
+
 
 
 
