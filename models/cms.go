@@ -31,6 +31,7 @@ type Page struct {
 	//MenuID      uint            `gorm:"not null;index" json:"menu_id"`
 	MenuID      *uint  `gorm:"default:null;index" json:"menu_id"`
 	Title       string          `gorm:"type:varchar(255);not null" json:"title"`
+	BreadcrumbTitle string     `gorm:"type:varchar(255)" json:"breadcrumb_title"`
 	Slug        string          `gorm:"type:varchar(255);uniqueIndex;not null" json:"slug"`
 	Category    string          `gorm:"type:varchar(100);not null" json:"category"` // 'landing_page', 'article', dll
 	TemplateKey string          `gorm:"type:varchar(100);default:'default'" json:"template_key"`
