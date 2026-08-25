@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"compro/backend-golang/models"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -292,78 +291,96 @@ func (h *CMSHandler) GetAllPages(c *fiber.Ctx) error {
 
 
 
+//INI OKEE
 // func (h *CMSHandler) GetPageBySlug(c *fiber.Ctx) error {
-// 	// 💡 Ganti dari c.Params("*") menjadi c.Params("slug") agar sinkron dengan router baru
+// 	// 💡 Ambil slug dari param router /api/pages/:slug
 // 	slug := c.Params("slug")
 
 // 	var page models.Page
-	
+
+// 	// 🟢 FIX UTAMA: Query langsung ke tabel `pages` berdasarkan `pages.slug`
+// 	// Hilangkan JOIN menus agar page dengan menu_id = NULL tetap terbaca sempurna
 // 	err := h.DB.Preload("Components", func(db *gorm.DB) *gorm.DB {
-//         return db.Order("page_components.order asc")
-//     }).
-//     Joins("JOIN menus ON menus.id = pages.menu_id").
-//     Where("menus.slug = ?", slug).
-//     First(&page).Error
+// 		return db.Order("page_components.order asc")
+// 	}).
+// 		Where("pages.slug = ?", slug).
+// 		First(&page).Error
 
-//     if err != nil {
-//         if err == gorm.ErrRecordNotFound {
-//             return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Halaman tidak ditemukan, Bos!"})
-//         }
-//         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-//     }
+// 	if err != nil {
+// 		if errors.Is(err, gorm.ErrRecordNotFound) {
+// 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+// 				"error": "Halaman tidak ditemukan, Bos!",
+// 			})
+// 		}
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 			"error": err.Error(),
+// 		})
+// 	}
 
+// 	// 🎯 AMBIL SEMUA MENU BERPOSISI SIDEBAR
+// 	// var sidebarMenus []models.Menu
+// 	// _ = h.DB.Where("position = ? AND is_active = ?", "sidebar", true).
+// 	// 	Order("`order` asc").
+// 	// 	Find(&sidebarMenus).Error
 
-// // 🎯 AMBIL SEMUA MENU BERPOSISI SIDEBAR (CARA B)
-//     var sidebarMenus []models.Menu
-//     _ = h.DB.Where("position = ? AND is_active = ?", "sidebar", true).
-//         Order("`order` asc").
-//         Find(&sidebarMenus).Error
+// 		var sidebarMenus []models.Menu
+// _ = h.DB.Preload("Pages").
+//     Where("position = ? AND is_active = ?", "sidebar", true).
+//     Order("`order` asc").
+//     Find(&sidebarMenus).Error
 
-//     // 💡 REVISI FIX SAKTI: Gabungkan struct 'page' utuh dengan data sidebar
-//     return c.JSON(fiber.Map{
-//         "page":          page,          // Ini isinya tetap objek tunggal {...} dari struct page lu beserta Components-nya
-//         "sidebar_menus": sidebarMenus,  // Ini array menu sidebarnya
-//     })
-
-// 	// Ini akan mengembalikan Objek Tunggal {...} bukan Array [...]
-// 	//return c.JSON(page) ini jalan
+// 	// 💡 Return gabungan data page & sidebar_menus
+// 	return c.JSON(fiber.Map{
+// 		"page":          page,          // Objek tunggal detail page & components
+// 		"sidebar_menus": sidebarMenus,  // Array menu sidebar
+// 	})
 // }
+
 func (h *CMSHandler) GetPageBySlug(c *fiber.Ctx) error {
-	// 💡 Ambil slug dari param router /api/pages/:slug
-	slug := c.Params("slug")
+    slug := c.Params("slug")
 
-	var page models.Page
+    var page models.Page
+    // Query page berdasarkan pages.slug
+    err := h.DB.Preload("Components", func(db *gorm.DB) *gorm.DB {
+        return db.Order("page_components.order asc")
+    }).Where("pages.slug = ?", slug).First(&page).Error
 
-	// 🟢 FIX UTAMA: Query langsung ke tabel `pages` berdasarkan `pages.slug`
-	// Hilangkan JOIN menus agar page dengan menu_id = NULL tetap terbaca sempurna
-	err := h.DB.Preload("Components", func(db *gorm.DB) *gorm.DB {
-		return db.Order("page_components.order asc")
-	}).
-		Where("pages.slug = ?", slug).
-		First(&page).Error
+    if err != nil {
+        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Halaman tidak ditemukan"})
+    }
 
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": "Halaman tidak ditemukan, Bos!",
-			})
-		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
+    var sidebarMenus []models.Menu
+    _ = h.DB.Preload("Pages").
+        Where("position = ? AND is_active = ?", "sidebar", true).
+        Order("`order` asc").
+        Find(&sidebarMenus).Error
 
-	// 🎯 AMBIL SEMUA MENU BERPOSISI SIDEBAR
-	var sidebarMenus []models.Menu
-	_ = h.DB.Where("position = ? AND is_active = ?", "sidebar", true).
-		Order("`order` asc").
-		Find(&sidebarMenus).Error
+    // 🟢 HAKIKAT UTAMA: OVERWRITE SLUG MENU DENGAN SLUG PAGE JIKA ADA
+    type SidebarResponse struct {
+        ID   uint   `json:"id"`
+        Name string `json:"name"`
+        Slug string `json:"slug"` // Ini yang akan dipakai Nuxt
+    }
 
-	// 💡 Return gabungan data page & sidebar_menus
-	return c.JSON(fiber.Map{
-		"page":          page,          // Objek tunggal detail page & components
-		"sidebar_menus": sidebarMenus,  // Array menu sidebar
-	})
+    var formattedSidebar []SidebarResponse
+    for _, m := range sidebarMenus {
+        finalSlug := m.Slug
+        // Jika menu punya relasi ke page, PAKAI SLUG PAGE!
+        if len(m.Pages) > 0 && m.Pages[0].Slug != "" {
+            finalSlug = m.Pages[0].Slug
+        }
+
+        formattedSidebar = append(formattedSidebar, SidebarResponse{
+            ID:   m.ID,
+            Name: m.Name,
+            Slug: finalSlug, // Isinya sekarang "grosir-kemeja-jakarta"
+        })
+    }
+
+    return c.JSON(fiber.Map{
+        "page":          page,
+        "sidebar_menus": formattedSidebar,
+    })
 }
 
 func (h *CMSHandler) UpdatePage(c *fiber.Ctx) error {

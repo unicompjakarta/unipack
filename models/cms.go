@@ -16,7 +16,8 @@ type Menu struct {
 	Order     int       `gorm:"default:0" json:"order"`
 	IsActive  bool      `gorm:"default:true" json:"is_active"`
 	ImageUrl  string    `gorm:"type:varchar(255);default:null" json:"image_url"`
-	Pages     []Page    `gorm:"foreignKey:MenuID;constraint:OnDelete:CASCADE;" json:"pages,omitempty"`
+	//Pages     []Page    `gorm:"foreignKey:MenuID;constraint:OnDelete:CASCADE;" json:"pages,omitempty"`
+	Pages     []Page    `gorm:"foreignKey:MenuID;constraint:OnDelete:CASCADE;" json:"pages"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
