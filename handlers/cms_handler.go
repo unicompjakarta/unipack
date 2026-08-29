@@ -271,6 +271,9 @@ func (h *CMSHandler) CreatePage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	fmt.Printf("DEBUG INPUT: %+v\n", page)
+    fmt.Println("DEBUG IMAGE:", page.FeaturedImage)
+
 	return c.Status(fiber.StatusCreated).JSON(page)
 }
 

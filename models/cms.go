@@ -34,6 +34,7 @@ type Page struct {
 	Title       string          `gorm:"type:varchar(255);not null" json:"title"`
 	BreadcrumbTitle string     `gorm:"type:varchar(255)" json:"breadcrumb_title"`
 	Slug        string          `gorm:"type:varchar(255);uniqueIndex;not null" json:"slug"`
+	FeaturedImage   string   `json:"featured_image"`
 	Category    string          `gorm:"type:varchar(100);not null" json:"category"` // 'landing_page', 'article', dll
 	TemplateKey string          `gorm:"type:varchar(100);default:'default'" json:"template_key"`
 	Components  []PageComponent `gorm:"foreignKey:PageID;constraint:OnDelete:CASCADE;" json:"components"`
