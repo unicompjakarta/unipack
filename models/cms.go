@@ -239,3 +239,14 @@ type AppSetting struct {
     Key   string `gorm:"primaryKey;type:varchar(100)" json:"key"`
     Value string `gorm:"type:text" json:"value"`
 }
+
+type User struct {
+	ID        uint           `gorm:"primaryKey" json:"id"`
+	Username  string         `gorm:"size:100;uniqueIndex;not null" json:"username"`
+	Email     string         `gorm:"size:100;uniqueIndex;not null" json:"email"`
+	Password  string         `gorm:"not null" json:"-"` // Hidden dari JSON response
+	Role      string         `gorm:"size:20;default:'admin'" json:"role"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+}

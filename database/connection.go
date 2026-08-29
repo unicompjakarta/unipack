@@ -81,6 +81,7 @@ import (
 	"fmt"
 	"log"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -164,13 +165,41 @@ func ConnectDB() {
 		&models.CompatibleSparepart{}, // Butuh LaptopType
 		&models.SerialLaptop{},        // Butuh LaptopType
 		&models.Consultation{},
+		&models.User{},
 	)
 	if err != nil {
 		log.Fatal("❌ Gagal AutoMigrate DB Nuxt: ", err)
 	}
+
+	SeedAdmin(dbNuxtInstance)
+
 	// 7. Assign ke variable global
 	DB = dbMainInstance
 	DBNuxt = dbNuxtInstance
+}
+
+// Fungsi SeedAdmin ditaruh di sini
+func SeedAdmin(db *gorm.DB) {
+    hashedPassword, err := bcrypt.GenerateFromPassword([]byte("bangali123"), bcrypt.DefaultCost)
+    if err != nil {
+        log.Println("❌ Gagal hash password:", err)
+        return
+    }
+
+    admin := models.User{
+        Username: "bangali",
+        Email:    "admin@unicomputer.id",
+        Password: string(hashedPassword),
+        Role:     "admin",
+    }
+
+    // FirstOrCreate otomatis insert data jika 'bangali' belum ada di DB
+    err = db.Where(models.User{Username: "bangali"}).FirstOrCreate(&admin).Error
+    if err != nil {
+        log.Println("❌ Gagal seeding admin:", err)
+    } else {
+        log.Println("✅ Admin default terverifikasi/dibuat di db_nuxt: bangali / bangali123")
+    }
 }
 
 // Helper untuk membuat DB jika belum ada

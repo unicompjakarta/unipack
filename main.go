@@ -10,6 +10,8 @@ import (
 	"github.com/gofiber/template/html/v2"
 )
 
+
+
 func main() {
 	// 1. Inisialisasi Database GORM
 	database.ConnectDB()
@@ -33,6 +35,9 @@ func main() {
 	app.Static("/uploads", "./uploads")
 
 	//upload image page
+
+	// Route ke LoginHandler
+	app.Post("/admin/login", handlers.LoginHandler)
 	
 	
 
