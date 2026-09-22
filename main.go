@@ -49,6 +49,8 @@ func main() {
 	// Endpoint navigasi menu FE
 	api.Post("/menus", cmsHandler.CreateMenu)
 	api.Get("/menus", cmsHandler.GetMenus)
+	api.Put("/menus/:id", cmsHandler.UpdateMenu)    // 🟢 TAMBAHAN UPDATE
+    api.Delete("/menus/:id", cmsHandler.DeleteMenu) // 🟢 TAMBAHAN DELETE
 
 	// Endpoint sub menu
 	api.Get("/navbar", cmsHandler.GetNavbarMenus)

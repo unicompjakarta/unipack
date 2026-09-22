@@ -42,17 +42,6 @@ func NewCMSHandler(db *gorm.DB) *CMSHandler {
 
 // === MENU HANDLERS ===
 
-// func (h *CMSHandler) CreateMenu(c *fiber.Ctx) error {
-// 	menu := new(models.Menu)
-// 	if err := c.BodyParser(menu); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-// 	}
-// 	if err := h.DB.Create(&menu).Error; err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-// 	}
-// 	return c.Status(fiber.StatusCreated).JSON(menu)
-// }
-
 // === Yang *CMSHandler jalan ya ===
 func (h *CMSHandler) CreateMenu(c *fiber.Ctx) error {
     menu := new(models.Menu)
@@ -107,6 +96,85 @@ if err == nil && file != nil {
     }
 
     return c.Status(fiber.StatusCreated).JSON(menu)
+}
+
+// UpdateMenu - Update menu berdasarkan ID
+func (h *CMSHandler) UpdateMenu(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	var menu models.Menu
+	if err := h.DB.First(&menu, id).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Menu tidak ditemukan"})
+	}
+
+	// 1. Parse text fields
+	menu.Name = c.FormValue("name")
+	menu.Slug = c.FormValue("slug")
+	menu.Position = c.FormValue("position")
+
+	// Parse parent_id
+	if parentIDStr := c.FormValue("parent_id"); parentIDStr != "" && parentIDStr != "null" {
+		var pID uint
+		if _, err := fmt.Sscanf(parentIDStr, "%d", &pID); err == nil {
+			menu.ParentID = &pID
+		}
+	} else {
+		menu.ParentID = nil
+	}
+
+	// Parse order
+	if orderStr := c.FormValue("order"); orderStr != "" {
+		fmt.Sscanf(orderStr, "%d", &menu.Order)
+	}
+
+	menu.IsActive = c.FormValue("is_active") != "false"
+
+	// 2. Cek apakah ada file image baru yang di-upload
+	file, err := c.FormFile("image")
+	if err == nil && file != nil {
+		if err := os.MkdirAll("./uploads", os.ModePerm); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuat folder upload"})
+		}
+
+		fileExtension := filepath.Ext(file.Filename)
+		uniqueFilename := fmt.Sprintf("menu-%d%s", time.Now().UnixNano(), fileExtension)
+		filePath := filepath.Join("./uploads", uniqueFilename)
+
+		if err := c.SaveFile(file, filePath); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal menyimpan file gambar"})
+		}
+
+		menu.ImageUrl = "/uploads/" + uniqueFilename
+	} else if imgUrl := c.FormValue("image_url"); imgUrl != "" {
+		menu.ImageUrl = imgUrl
+	}
+
+	// 3. Simpan perubahan ke DB
+	if err := h.DB.Save(&menu).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(menu)
+}
+
+// DeleteMenu - Hapus menu (beserta submenus jika ada)
+func (h *CMSHandler) DeleteMenu(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	var menu models.Menu
+	if err := h.DB.First(&menu, id).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Menu tidak ditemukan"})
+	}
+
+	// Hapus submenu yang terikat ke parent ini jika ada
+	h.DB.Where("parent_id = ?", menu.ID).Delete(&models.Menu{})
+
+	// Hapus menu utama
+	if err := h.DB.Delete(&menu).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Menu berhasil dihapus"})
 }
 
 // func (h *CMSHandler) GetMenus(c *fiber.Ctx) error {
