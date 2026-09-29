@@ -76,8 +76,8 @@ func main() {
 	//END Blok APP Web
 
 	// Route Single Row Konfigurasi Web Profile
-	app.Get("/web-profile", cmsHandler.GetWebProfile)
-	app.Post("/web-profile", cmsHandler.SaveWebProfile)
+	api.Get("/web-profile", cmsHandler.GetWebProfile)
+	api.Post("/web-profile", cmsHandler.SaveWebProfile)
 
 	// Endpoint Pengumuman
 
