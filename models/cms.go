@@ -43,6 +43,7 @@ type Page struct {
 	SeoTitle       string `gorm:"type:varchar(255)" json:"seo_title"`
 	SeoDescription string `gorm:"type:text" json:"seo_description"`
 	SeoKeywords    string `gorm:"type:varchar(255)" json:"seo_keywords"`
+	JsonLd          string `gorm:"type:text" json:"json_ld"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

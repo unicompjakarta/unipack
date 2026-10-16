@@ -314,35 +314,72 @@ func (h *CMSHandler) GetNavbarMenus(c *fiber.Ctx) error {
 // 	return c.Status(fiber.StatusCreated).JSON(page)
 // }
 
+
+
+
+//--------INI NORMAL---------
+// func (h *CMSHandler) CreatePage(c *fiber.Ctx) error {
+// 	page := new(models.Page)
+// 	if err := c.BodyParser(page); err != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 	}
+
+// 	// 🟢 SANITASI MENU_ID: Ubah 0 menjadi nil (NULL di MySQL)
+// 	if page.MenuID != nil && *page.MenuID == 0 {
+// 		page.MenuID = nil
+// 	}
+
+// 	// 🟢 (Optional Safety) Jika MenuID diisi angka selain 0, pastikan ID menu tersebut benar-benar ada di DB
+// 	if page.MenuID != nil {
+// 		var menuExists bool
+// 		h.DB.Model(&models.Menu{}).Select("count(*) > 0").Where("id = ?", *page.MenuID).Find(&menuExists)
+// 		if !menuExists {
+// 			page.MenuID = nil // Reset ke NULL kalau ID menunya gak ketemu di tabel menus
+// 		}
+// 	}
+
+// 	// GORM otomatis menyimpan data bertingkat (Page + Components sekaligus)
+// 	if err := h.DB.Create(&page).Error; err != nil {
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+// 	}
+
+// 	fmt.Printf("DEBUG INPUT: %+v\n", page)
+//     fmt.Println("DEBUG IMAGE:", page.FeaturedImage)
+
+// 	return c.Status(fiber.StatusCreated).JSON(page)
+// }
+
+//--------END CREATE PAGE NORMAL -----------------------
+
+//versi baru
 func (h *CMSHandler) CreatePage(c *fiber.Ctx) error {
-	page := new(models.Page)
-	if err := c.BodyParser(page); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
+    page := new(models.Page)
+    if err := c.BodyParser(page); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+    }
 
-	// 🟢 SANITASI MENU_ID: Ubah 0 menjadi nil (NULL di MySQL)
-	if page.MenuID != nil && *page.MenuID == 0 {
-		page.MenuID = nil
-	}
+    // Sanitasi Menu_ID
+    if page.MenuID != nil && *page.MenuID == 0 {
+        page.MenuID = nil
+    }
 
-	// 🟢 (Optional Safety) Jika MenuID diisi angka selain 0, pastikan ID menu tersebut benar-benar ada di DB
-	if page.MenuID != nil {
-		var menuExists bool
-		h.DB.Model(&models.Menu{}).Select("count(*) > 0").Where("id = ?", *page.MenuID).Find(&menuExists)
-		if !menuExists {
-			page.MenuID = nil // Reset ke NULL kalau ID menunya gak ketemu di tabel menus
-		}
-	}
+    if page.MenuID != nil {
+        var menuExists bool
+        h.DB.Model(&models.Menu{}).Select("count(*) > 0").Where("id = ?", *page.MenuID).Find(&menuExists)
+        if !menuExists {
+            page.MenuID = nil
+        }
+    }
 
-	// GORM otomatis menyimpan data bertingkat (Page + Components sekaligus)
-	if err := h.DB.Create(&page).Error; err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
+    // GORM otomatis menyimpan data bertingkat termasuk field JsonLd baru
+    if err := h.DB.Create(&page).Error; err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+    }
 
-	fmt.Printf("DEBUG INPUT: %+v\n", page)
+    fmt.Printf("DEBUG INPUT: %+v\n", page)
     fmt.Println("DEBUG IMAGE:", page.FeaturedImage)
 
-	return c.Status(fiber.StatusCreated).JSON(page)
+    return c.Status(fiber.StatusCreated).JSON(page)
 }
 
 // 💡 METHOD BARU: Khusus untuk menampilkan daftar di tabel Admin Bos
@@ -361,57 +398,61 @@ func (h *CMSHandler) GetAllPages(c *fiber.Ctx) error {
 }
 
 
-
-//INI OKEE
+//----------INI WORK -----------------
 // func (h *CMSHandler) GetPageBySlug(c *fiber.Ctx) error {
-// 	// 💡 Ambil slug dari param router /api/pages/:slug
-// 	slug := c.Params("slug")
+//     slug := c.Params("slug")
 
-// 	var page models.Page
+//     var page models.Page
+//     // Query page berdasarkan pages.slug
+//     err := h.DB.Preload("Components", func(db *gorm.DB) *gorm.DB {
+//         return db.Order("page_components.order asc")
+//     }).Where("pages.slug = ?", slug).First(&page).Error
 
-// 	// 🟢 FIX UTAMA: Query langsung ke tabel `pages` berdasarkan `pages.slug`
-// 	// Hilangkan JOIN menus agar page dengan menu_id = NULL tetap terbaca sempurna
-// 	err := h.DB.Preload("Components", func(db *gorm.DB) *gorm.DB {
-// 		return db.Order("page_components.order asc")
-// 	}).
-// 		Where("pages.slug = ?", slug).
-// 		First(&page).Error
+//     if err != nil {
+//         return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Halaman tidak ditemukan"})
+//     }
 
-// 	if err != nil {
-// 		if errors.Is(err, gorm.ErrRecordNotFound) {
-// 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-// 				"error": "Halaman tidak ditemukan, Bos!",
-// 			})
-// 		}
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 			"error": err.Error(),
-// 		})
-// 	}
+//     var sidebarMenus []models.Menu
+//     _ = h.DB.Preload("Pages").
+//         Where("position = ? AND is_active = ?", "sidebar", true).
+//         Order("`order` asc").
+//         Find(&sidebarMenus).Error
 
-// 	// 🎯 AMBIL SEMUA MENU BERPOSISI SIDEBAR
-// 	// var sidebarMenus []models.Menu
-// 	// _ = h.DB.Where("position = ? AND is_active = ?", "sidebar", true).
-// 	// 	Order("`order` asc").
-// 	// 	Find(&sidebarMenus).Error
+//     // 🟢 HAKIKAT UTAMA: OVERWRITE SLUG MENU DENGAN SLUG PAGE JIKA ADA
+//     type SidebarResponse struct {
+//         ID   uint   `json:"id"`
+//         Name string `json:"name"`
+//         Slug string `json:"slug"` // Ini yang akan dipakai Nuxt
+//     }
 
-// 		var sidebarMenus []models.Menu
-// _ = h.DB.Preload("Pages").
-//     Where("position = ? AND is_active = ?", "sidebar", true).
-//     Order("`order` asc").
-//     Find(&sidebarMenus).Error
+//     var formattedSidebar []SidebarResponse
+//     for _, m := range sidebarMenus {
+//         finalSlug := m.Slug
+//         // Jika menu punya relasi ke page, PAKAI SLUG PAGE!
+//         if len(m.Pages) > 0 && m.Pages[0].Slug != "" {
+//             finalSlug = m.Pages[0].Slug
+//         }
 
-// 	// 💡 Return gabungan data page & sidebar_menus
-// 	return c.JSON(fiber.Map{
-// 		"page":          page,          // Objek tunggal detail page & components
-// 		"sidebar_menus": sidebarMenus,  // Array menu sidebar
-// 	})
+//         formattedSidebar = append(formattedSidebar, SidebarResponse{
+//             ID:   m.ID,
+//             Name: m.Name,
+//             Slug: finalSlug, // Isinya sekarang "grosir-kemeja-jakarta"
+//         })
+//     }
+
+//     return c.JSON(fiber.Map{
+//         "page":          page,
+//         "sidebar_menus": formattedSidebar,
+//     })
 // }
 
+/// -------------END GET BY SLUG -----------------
+// --- GET PAGE BY SLUG ---
 func (h *CMSHandler) GetPageBySlug(c *fiber.Ctx) error {
     slug := c.Params("slug")
 
     var page models.Page
-    // Query page berdasarkan pages.slug
+    // Query page berdasarkan pages.slug (JsonLd otomatis terambil karena bagian dari struct Page)
     err := h.DB.Preload("Components", func(db *gorm.DB) *gorm.DB {
         return db.Order("page_components.order asc")
     }).Where("pages.slug = ?", slug).First(&page).Error
@@ -426,17 +467,15 @@ func (h *CMSHandler) GetPageBySlug(c *fiber.Ctx) error {
         Order("`order` asc").
         Find(&sidebarMenus).Error
 
-    // 🟢 HAKIKAT UTAMA: OVERWRITE SLUG MENU DENGAN SLUG PAGE JIKA ADA
     type SidebarResponse struct {
         ID   uint   `json:"id"`
         Name string `json:"name"`
-        Slug string `json:"slug"` // Ini yang akan dipakai Nuxt
+        Slug string `json:"slug"`
     }
 
     var formattedSidebar []SidebarResponse
     for _, m := range sidebarMenus {
         finalSlug := m.Slug
-        // Jika menu punya relasi ke page, PAKAI SLUG PAGE!
         if len(m.Pages) > 0 && m.Pages[0].Slug != "" {
             finalSlug = m.Pages[0].Slug
         }
@@ -444,7 +483,7 @@ func (h *CMSHandler) GetPageBySlug(c *fiber.Ctx) error {
         formattedSidebar = append(formattedSidebar, SidebarResponse{
             ID:   m.ID,
             Name: m.Name,
-            Slug: finalSlug, // Isinya sekarang "grosir-kemeja-jakarta"
+            Slug: finalSlug,
         })
     }
 
@@ -452,61 +491,114 @@ func (h *CMSHandler) GetPageBySlug(c *fiber.Ctx) error {
         "page":          page,
         "sidebar_menus": formattedSidebar,
     })
-}
+} 
 
-func (h *CMSHandler) UpdatePage(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var existingPage models.Page
 
-	// 1. Ambil data asli yang ada di database sekarang
-	if err := h.DB.Where("id = ?", id).First(&existingPage).Error; err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Page tidak ada"})
-	}
+// --INI WORK UPDATE NORMAL----
+// func (h *CMSHandler) UpdatePage(c *fiber.Ctx) error {
+// 	id := c.Params("id")
+// 	var existingPage models.Page
 
-	newPageData := new(models.Page)
-	if err := c.BodyParser(newPageData); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
+// 	// 1. Ambil data asli yang ada di database sekarang
+// 	if err := h.DB.Where("id = ?", id).First(&existingPage).Error; err != nil {
+// 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Page tidak ada"})
+// 	}
 
-	// 🟢 2. SANITASI MENU_ID: Mencegah Foreign Key Constraint Error (1452)
-	// Jika MenuID bernilai 0 dari frontend, ubah ke nil (NULL di MySQL)
-	if newPageData.MenuID != nil && *newPageData.MenuID == 0 {
-		newPageData.MenuID = nil
-	}
+// 	newPageData := new(models.Page)
+// 	if err := c.BodyParser(newPageData); err != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+// 	}
 
-	// Jika MenuID diisi selain 0, pastikan ID menu tersebut benar-benar ada di tabel menus
-	if newPageData.MenuID != nil {
-		var menuExists bool
-		h.DB.Model(&models.Menu{}).Select("count(*) > 0").Where("id = ?", *newPageData.MenuID).Find(&menuExists)
-		if !menuExists {
-			newPageData.MenuID = nil // Fallback ke NULL jika menu ID tidak ditemukan
-		}
-	}
+// 	// 🟢 2. SANITASI MENU_ID: Mencegah Foreign Key Constraint Error (1452)
+// 	// Jika MenuID bernilai 0 dari frontend, ubah ke nil (NULL di MySQL)
+// 	if newPageData.MenuID != nil && *newPageData.MenuID == 0 {
+// 		newPageData.MenuID = nil
+// 	}
 
-	// 3. Transaksi aman: Hapus komponen lama, ganti dengan susunan block komponen baru dari admin
-	err := h.DB.Transaction(func(tx *gorm.DB) error {
-		// Hapus komponen lama bawaan page ini
-		if err := tx.Where("page_id = ?", id).Delete(&models.PageComponent{}).Error; err != nil {
-			return err
-		}
+// 	// Jika MenuID diisi selain 0, pastikan ID menu tersebut benar-benar ada di tabel menus
+// 	if newPageData.MenuID != nil {
+// 		var menuExists bool
+// 		h.DB.Model(&models.Menu{}).Select("count(*) > 0").Where("id = ?", *newPageData.MenuID).Find(&menuExists)
+// 		if !menuExists {
+// 			newPageData.MenuID = nil // Fallback ke NULL jika menu ID tidak ditemukan
+// 		}
+// 	}
 
-		// 💡 KUNCI SINKRONISASI DATETIME NYA DI SINI, BOS:
-		newPageData.ID = existingPage.ID
-		newPageData.CreatedAt = existingPage.CreatedAt // Pasang kembali waktu buat aslinya agar tidak jadi 0000-00-00
+// 	// 3. Transaksi aman: Hapus komponen lama, ganti dengan susunan block komponen baru dari admin
+// 	err := h.DB.Transaction(func(tx *gorm.DB) error {
+// 		// Hapus komponen lama bawaan page ini
+// 		if err := tx.Where("page_id = ?", id).Delete(&models.PageComponent{}).Error; err != nil {
+// 			return err
+// 		}
 
-		// Gunakan Omit("created_at") sebagai proteksi ganda agar GORM mengabaikan kolom ini saat query UPDATE dijalankan
-		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Omit("created_at").Save(newPageData).Error; err != nil {
-			return err
-		}
-		return nil
-	})
+// 		// 💡 KUNCI SINKRONISASI DATETIME NYA DI SINI, BOS:
+// 		newPageData.ID = existingPage.ID
+// 		newPageData.CreatedAt = existingPage.CreatedAt // Pasang kembali waktu buat aslinya agar tidak jadi 0000-00-00
 
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
-	}
+// 		// Gunakan Omit("created_at") sebagai proteksi ganda agar GORM mengabaikan kolom ini saat query UPDATE dijalankan
+// 		if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Omit("created_at").Save(newPageData).Error; err != nil {
+// 			return err
+// 		}
+// 		return nil
+// 	})
+
+// 	if err != nil {
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+// 	}
 	
-	return c.JSON(fiber.Map{"status": "success", "message": "Page updated successfully"})
+// 	return c.JSON(fiber.Map{"status": "success", "message": "Page updated successfully"})
+// }
+
+
+// --- REVISI UPDATE PAGE ---
+func (h *CMSHandler) UpdatePage(c *fiber.Ctx) error {
+    id := c.Params("id")
+    var existingPage models.Page
+
+    if err := h.DB.Where("id = ?", id).First(&existingPage).Error; err != nil {
+        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Page tidak ada"})
+    }
+
+    newPageData := new(models.Page)
+    if err := c.BodyParser(newPageData); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+    }
+
+    // Sanitasi Menu_ID
+    if newPageData.MenuID != nil && *newPageData.MenuID == 0 {
+        newPageData.MenuID = nil
+    }
+
+    if newPageData.MenuID != nil {
+        var menuExists bool
+        h.DB.Model(&models.Menu{}).Select("count(*) > 0").Where("id = ?", *newPageData.MenuID).Find(&menuExists)
+        if !menuExists {
+            newPageData.MenuID = nil
+        }
+    }
+
+    // Transaksi aman: Memperbarui data page termasuk teks JsonLd dan komponennya
+    err := h.DB.Transaction(func(tx *gorm.DB) error {
+        if err := tx.Where("page_id = ?", id).Delete(&models.PageComponent{}).Error; err != nil {
+            return err
+        }
+
+        newPageData.ID = existingPage.ID
+        newPageData.CreatedAt = existingPage.CreatedAt
+
+        if err := tx.Session(&gorm.Session{FullSaveAssociations: true}).Omit("created_at").Save(newPageData).Error; err != nil {
+            return err
+        }
+        return nil
+    })
+
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+    }
+    
+    return c.JSON(fiber.Map{"status": "success", "message": "Page updated successfully"})
 }
+
 
 func (h *CMSHandler) DeletePage(c *fiber.Ctx) error {
 	id := c.Params("id")
