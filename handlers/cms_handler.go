@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"bytes"
 	"compro/backend-golang/models"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -987,6 +990,45 @@ if err == gorm.ErrRecordNotFound {
 	encodedText := url.QueryEscape(waText)
 	adminPhone := "628112626146" 
 	waRedirectURL := fmt.Sprintf("https://wa.me/%s?text=%s", adminPhone, encodedText)
+
+	
+
+	// UNTUK NOTIF Kirim payload lengkap secara asynchronous ke Webhook n8n
+	// 3. Kirim payload lengkap secara asynchronous ke Webhook n8n dengan Debugging Error
+	go func(data *ConsultationRequest, brandName string, typeName string) {
+		if data == nil {
+			return
+		}
+
+		payloadData := map[string]interface{}{
+			"name":        data.Name,
+			"whats_app":   data.WhatsApp, // Sesuaikan dengan key struct/frontend Anda
+			"brand":       brandName,
+			"laptop_type": typeName,
+			"complaint":   data.Complaint,
+		}
+
+		payload, err := json.Marshal(payloadData)
+		if err != nil {
+			fmt.Println("Gagal marshal JSON n8n:", err)
+			return
+		}
+
+		// TIP: Gunakan Production URL jika ingin permanen, atau Test URL saat uji coba
+		n8nWebhookURL := "http://n8n.unicomputer.id:5678/webhook/consultation-notify" 
+
+		resp, err := http.Post(n8nWebhookURL, "application/json", bytes.NewBuffer(payload))
+		if err != nil {
+			fmt.Println("GAGAL TEMBAK WEBHOOK N8N:", err)
+			return
+		}
+		defer resp.Body.Close()
+
+		fmt.Println("BERHASIL TEMBAK N8N, Status:", resp.Status)
+	}(req, brand.Name, laptopType.Type)
+
+   //END Notif, ini buat webhook n8n aja
+
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"success":      true,
